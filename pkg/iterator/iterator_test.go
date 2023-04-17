@@ -25,7 +25,7 @@ func TestEntrySlice_Next(t *testing.T) {
 
 	z, i, err := iter.Next()
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrStopIteration)
+	assert.ErrorIs(t, err, ErrAtEnd)
 	assert.Equal(t, -1, i)
 	assert.Nil(t, z)
 }
@@ -49,7 +49,7 @@ func TestEntryChannel_Next(t *testing.T) {
 
 	z, i, err := iter.Next()
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrStopIteration)
+	assert.ErrorIs(t, err, ErrAtEnd)
 	assert.Equal(t, -1, i)
 	assert.Nil(t, z)
 }
@@ -117,6 +117,19 @@ func TestDupe(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, 6, count)
+}
+
+func TestFanout(t *testing.T) {
+	base := FromSlice(_testEntries())
+	a, b := Fanout(base)
+	merged := Merge(a, b)
+	count := 0
+	err := merged.Iterate(func(entry entries.LogEntry, i int) error {
+		count++
+		return nil
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 3, count)
 }
 
 func _testEntries() []entries.LogEntry {

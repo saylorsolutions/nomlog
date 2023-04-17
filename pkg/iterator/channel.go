@@ -15,7 +15,7 @@ type entryChannel struct {
 func (e *entryChannel) Next() (entries.LogEntry, int, error) {
 	entry, ok := <-e.ch
 	if !ok {
-		return nil, -1, ErrStopIteration
+		return nil, -1, ErrAtEnd
 	}
 	cur := e.next
 	e.next += 1
@@ -26,7 +26,7 @@ func (e *entryChannel) Iterate(iter func(entry entries.LogEntry, i int) error) e
 	for {
 		entry, i, err := e.Next()
 		if err != nil {
-			if errors.Is(err, ErrStopIteration) {
+			if errors.Is(err, ErrAtEnd) {
 				return nil
 			}
 			return err

@@ -8,38 +8,65 @@ import (
 )
 
 var (
-	ErrStopIteration = errors.New("stop iterating")
+	ErrAtEnd = errors.New("end of iterator")
 )
 
 type Iterator interface {
 	// Next returns the next LogEntry and its offset in the stream.
-	// May return ErrStopIteration if the end of the stream is reached.
+	// May return ErrAtEnd if the end of the stream is reached.
 	Next() (entries.LogEntry, int, error)
 	// Iterate will progress through all LogEntry items in the stream, calling iter for each one along with the offset.
-	// If iter returns ErrStopIteration, then iteration will cease, returning nil.
+	// If iter returns ErrAtEnd, then iteration will cease, returning nil.
 	// If any other error is returned, then iteration will cease, and the error will be returned.
 	Iterate(iter func(entry entries.LogEntry, i int) error) error
 }
 
-func FromSlice(entries []entries.LogEntry) Iterator {
-	return &entrySlice{entries: entries}
+var _ Iterator = (Func)(nil)
+
+type Func func() (entries.LogEntry, int, error)
+
+func (f Func) Next() (entries.LogEntry, int, error) {
+	return f()
+}
+
+func (f Func) Iterate(iter func(entry entries.LogEntry, i int) error) error {
+	for {
+		entry, i, err := f.Next()
+		if err != nil {
+			if errors.Is(err, ErrAtEnd) {
+				return nil
+			}
+			return err
+		}
+		if err := iter(entry, i); err != nil {
+			return err
+		}
+	}
+}
+
+func FromSlice(slice []entries.LogEntry) Iterator {
+	cur := 0
+	return Func(func() (entries.LogEntry, int, error) {
+		if cur >= len(slice) {
+			return nil, -1, ErrAtEnd
+		}
+		e := slice[cur]
+		i := cur
+		cur++
+		return e, i, nil
+	})
 }
 
 func FromChannel(entries <-chan entries.LogEntry) Iterator {
+	if entries == nil {
+		return Empty()
+	}
 	return &entryChannel{ch: entries}
 }
 
 func AsChannel(iter Iterator) <-chan entries.LogEntry {
 	if chi, ok := iter.(*entryChannel); ok {
 		return chi.ch
-	}
-	if chs, ok := iter.(*entrySlice); ok {
-		ch := make(chan entries.LogEntry, len(chs.entries))
-		defer close(ch)
-		for i := 0; i < len(chs.entries); i++ {
-			ch <- chs.entries[i]
-		}
-		return ch
 	}
 	ch := make(chan entries.LogEntry)
 	go func() {
@@ -86,12 +113,10 @@ func Merge(a, b Iterator) Iterator {
 // Dupe will take control of and branch the duplicate Iterator into two identical LogIterators.
 // Any LogEntry posted to the source Iterator will be sent to both of the new LogIterators.
 // This is useful in a case similar to when you want to print messages as well as write them to a file.
-// It's not advised to read from a Iterator that has been passed to Dupe, use oen of the returned LogIterators instead.
+// It's not advised to read from an Iterator that has been passed to Dupe, use one of the returned LogIterators instead.
 func Dupe(iter Iterator) (Iterator, Iterator) {
 	if iter == nil {
-		ch := make(chan entries.LogEntry)
-		close(ch)
-		return FromChannel(ch), FromChannel(ch)
+		return Empty(), Empty()
 	}
 
 	a := make(chan entries.LogEntry)
@@ -125,6 +150,35 @@ func Dupe(iter Iterator) (Iterator, Iterator) {
 	return aiter, biter
 }
 
+// Fanout will take control of the input Iterator and output entries received from the input Iterator to one of the output Iterators.
+// It's not advised to read from the input Iterator after passing it to Fanout.
+// If an error occurs during iteration, then Drain will be called on the input.
+func Fanout(iter Iterator) (Iterator, Iterator) {
+	if iter == nil {
+		return Empty(), Empty()
+	}
+
+	a := make(chan entries.LogEntry)
+	b := make(chan entries.LogEntry)
+	go func() {
+		defer func() {
+			close(a)
+			close(b)
+		}()
+		err := iter.Iterate(func(entry entries.LogEntry, i int) error {
+			select {
+			case a <- entry:
+			case b <- entry:
+			}
+			return nil
+		})
+		if err != nil {
+			Drain(iter)
+		}
+	}()
+	return FromChannel(a), FromChannel(b)
+}
+
 // Drain will drain all entries from a Iterator in a new goroutine.
 // This can be useful as an error fallback in case of an iteration error to prevent upstream blocking.
 func Drain(iter Iterator) {
@@ -133,4 +187,9 @@ func Drain(iter Iterator) {
 		for range ch {
 		}
 	}()
+}
+
+// Empty returns an empty Iterator that immediately returns from a call to Iterate.
+func Empty() Iterator {
+	return FromSlice(nil)
 }
