@@ -1,5 +1,7 @@
 package entries
 
+import "errors"
+
 var _ LogIterator = (*entrySlice)(nil)
 
 type entrySlice struct {
@@ -25,6 +27,9 @@ func (e *entrySlice) Iterate(iter func(entry LogEntry, i int) error) error {
 		if err != nil {
 			break
 		}
+	}
+	if errors.Is(err, ErrStopIteration) {
+		return nil
 	}
 	return err
 }

@@ -61,8 +61,7 @@ func TestEntrySlice_Iterate(t *testing.T) {
 		count += 1
 		return nil
 	})
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrStopIteration)
+	assert.NoError(t, err)
 	assert.Equal(t, 3, count)
 }
 
@@ -74,8 +73,7 @@ func TestEntryChannel_Iterate(t *testing.T) {
 		count += 1
 		return nil
 	})
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrStopIteration)
+	assert.NoError(t, err)
 	assert.Equal(t, 3, count)
 }
 
@@ -89,8 +87,7 @@ func TestMerge_FromSlices(t *testing.T) {
 		count += 1
 		return nil
 	})
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrStopIteration)
+	assert.NoError(t, err)
 	assert.Equal(t, 6, count)
 }
 
@@ -104,8 +101,7 @@ func TestMerge_FromChannels(t *testing.T) {
 		count += 1
 		return nil
 	})
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrStopIteration)
+	assert.NoError(t, err)
 	assert.Equal(t, 6, count)
 }
 

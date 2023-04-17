@@ -1,5 +1,7 @@
 package entries
 
+import "errors"
+
 var _ LogIterator = (*entryChannel)(nil)
 
 type entryChannel struct {
@@ -21,6 +23,9 @@ func (e *entryChannel) Iterate(iter func(entry LogEntry, i int) error) error {
 	for {
 		entry, i, err := e.Next()
 		if err != nil {
+			if errors.Is(err, ErrStopIteration) {
+				return nil
+			}
 			return err
 		}
 		if err := iter(entry, i); err != nil {
