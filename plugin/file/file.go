@@ -11,9 +11,8 @@ import (
 )
 
 const (
-	defaultMessageField = "@message"
-	readTimeField       = "@read_timestamp"
-	readLineField       = "@read_line_number"
+	readTimeField = "@read_timestamp"
+	readLineField = "@read_line_number"
 )
 
 // Source behaves the same as CtxSource, except that it will use context.Background as the context.
@@ -52,14 +51,9 @@ func ctxSource(ctx context.Context, filename string) (*tail.Tail, iterator.Itera
 				if !ok {
 					return
 				}
-				entry := entries.LogEntry{
-					readTimeField: l.Time.Format(time.RFC3339),
-					readLineField: l.Num,
-				}
-				err := json.Unmarshal([]byte(l.Text), &entry)
-				if err != nil {
-					entry[defaultMessageField] = l.Text
-				}
+				entry := entries.FromString(l.Text)
+				entry[readTimeField] = l.Time.UTC().Format(time.RFC3339)
+				entry[readLineField] = l.Num
 				ch <- entry
 			}
 		}
