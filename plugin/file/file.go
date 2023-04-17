@@ -46,6 +46,7 @@ func ctxSource(ctx context.Context, filename string) (*tail.Tail, iterator.Itera
 		for {
 			select {
 			case <-ctx.Done():
+				_ = t.Stop()
 				return
 			case l, ok := <-t.Lines:
 				if !ok {
