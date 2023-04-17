@@ -1,15 +1,18 @@
-package entries
+package iterator
 
-import "errors"
+import (
+	"errors"
+	"github.com/saylorsolutions/slog/pkg/entries"
+)
 
-var _ LogIterator = (*entryChannel)(nil)
+var _ Iterator = (*entryChannel)(nil)
 
 type entryChannel struct {
-	ch   <-chan LogEntry
+	ch   <-chan entries.LogEntry
 	next int
 }
 
-func (e *entryChannel) Next() (LogEntry, int, error) {
+func (e *entryChannel) Next() (entries.LogEntry, int, error) {
 	entry, ok := <-e.ch
 	if !ok {
 		return nil, -1, ErrStopIteration
@@ -19,7 +22,7 @@ func (e *entryChannel) Next() (LogEntry, int, error) {
 	return entry, cur, nil
 }
 
-func (e *entryChannel) Iterate(iter func(entry LogEntry, i int) error) error {
+func (e *entryChannel) Iterate(iter func(entry entries.LogEntry, i int) error) error {
 	for {
 		entry, i, err := e.Next()
 		if err != nil {

@@ -1,12 +1,13 @@
-package entries
+package iterator
 
 import (
+	"github.com/saylorsolutions/slog/pkg/entries"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestEntrySlice_Next(t *testing.T) {
-	iter := NewSliceIterator(_testEntries())
+	iter := FromSlice(_testEntries())
 	a, i, err := iter.Next()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, i)
@@ -30,7 +31,7 @@ func TestEntrySlice_Next(t *testing.T) {
 }
 
 func TestEntryChannel_Next(t *testing.T) {
-	iter := NewChannelIterator(_testEntryChannel())
+	iter := FromChannel(_testEntryChannel())
 	a, i, err := iter.Next()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, i)
@@ -54,10 +55,10 @@ func TestEntryChannel_Next(t *testing.T) {
 }
 
 func TestEntrySlice_Iterate(t *testing.T) {
-	iter := NewSliceIterator(_testEntries())
+	iter := FromSlice(_testEntries())
 	count := 0
 
-	err := iter.Iterate(func(entry LogEntry, i int) error {
+	err := iter.Iterate(func(entry entries.LogEntry, i int) error {
 		count += 1
 		return nil
 	})
@@ -66,10 +67,10 @@ func TestEntrySlice_Iterate(t *testing.T) {
 }
 
 func TestEntryChannel_Iterate(t *testing.T) {
-	iter := NewChannelIterator(_testEntryChannel())
+	iter := FromChannel(_testEntryChannel())
 	count := 0
 
-	err := iter.Iterate(func(entry LogEntry, i int) error {
+	err := iter.Iterate(func(entry entries.LogEntry, i int) error {
 		count += 1
 		return nil
 	})
@@ -78,12 +79,12 @@ func TestEntryChannel_Iterate(t *testing.T) {
 }
 
 func TestMerge_FromSlices(t *testing.T) {
-	a := NewSliceIterator(_testEntries())
-	b := NewSliceIterator(_testEntries())
+	a := FromSlice(_testEntries())
+	b := FromSlice(_testEntries())
 	c := Merge(a, b)
 	count := 0
 
-	err := c.Iterate(func(entry LogEntry, i int) error {
+	err := c.Iterate(func(entry entries.LogEntry, i int) error {
 		count += 1
 		return nil
 	})
@@ -92,12 +93,12 @@ func TestMerge_FromSlices(t *testing.T) {
 }
 
 func TestMerge_FromChannels(t *testing.T) {
-	a := NewChannelIterator(_testEntryChannel())
-	b := NewChannelIterator(_testEntryChannel())
+	a := FromChannel(_testEntryChannel())
+	b := FromChannel(_testEntryChannel())
 	c := Merge(a, b)
 	count := 0
 
-	err := c.Iterate(func(entry LogEntry, i int) error {
+	err := c.Iterate(func(entry entries.LogEntry, i int) error {
 		count += 1
 		return nil
 	})
@@ -105,8 +106,21 @@ func TestMerge_FromChannels(t *testing.T) {
 	assert.Equal(t, 6, count)
 }
 
-func _testEntries() []LogEntry {
-	return []LogEntry{
+func TestDupe(t *testing.T) {
+	base := FromSlice(_testEntries())
+	a, b := Dupe(base)
+	merged := Merge(a, b)
+	count := 0
+	err := merged.Iterate(func(entry entries.LogEntry, i int) error {
+		count++
+		return nil
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 6, count)
+}
+
+func _testEntries() []entries.LogEntry {
+	return []entries.LogEntry{
 		{
 			"message": "A",
 		},
@@ -119,9 +133,9 @@ func _testEntries() []LogEntry {
 	}
 }
 
-func _testEntryChannel() <-chan LogEntry {
+func _testEntryChannel() <-chan entries.LogEntry {
 	slice := _testEntries()
-	ch := make(chan LogEntry, len(slice))
+	ch := make(chan entries.LogEntry, len(slice))
 	for _, s := range slice {
 		ch <- s
 	}

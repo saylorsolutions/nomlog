@@ -1,15 +1,18 @@
-package entries
+package iterator
 
-import "errors"
+import (
+	"errors"
+	"github.com/saylorsolutions/slog/pkg/entries"
+)
 
-var _ LogIterator = (*entrySlice)(nil)
+var _ Iterator = (*entrySlice)(nil)
 
 type entrySlice struct {
-	entries []LogEntry
+	entries []entries.LogEntry
 	next    int
 }
 
-func (e *entrySlice) Next() (LogEntry, int, error) {
+func (e *entrySlice) Next() (entries.LogEntry, int, error) {
 	cur := e.next
 	if len(e.entries) > cur {
 		e.next += 1
@@ -18,7 +21,7 @@ func (e *entrySlice) Next() (LogEntry, int, error) {
 	return nil, -1, ErrStopIteration
 }
 
-func (e *entrySlice) Iterate(iter func(entry LogEntry, i int) error) error {
+func (e *entrySlice) Iterate(iter func(entry entries.LogEntry, i int) error) error {
 	entry, i, err := e.Next()
 	for ; err == nil; entry, i, err = e.Next() {
 		entry := entry

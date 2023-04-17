@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/saylorsolutions/slog/pkg/entries"
+	"github.com/saylorsolutions/slog/pkg/iterator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -93,7 +94,7 @@ func TestSink(t *testing.T) {
 		}
 	}()
 
-	iter := entries.NewSliceIterator([]entries.LogEntry{
+	iter := iterator.FromSlice([]entries.LogEntry{
 		{
 			"A": "A",
 		},
