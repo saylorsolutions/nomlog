@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/nxadm/tail"
-	"github.com/saylorsolutions/slog/pkg/entries"
-	"github.com/saylorsolutions/slog/pkg/iterator"
+	"github.com/saylorsolutions/nomlog/pkg/entries"
+	"github.com/saylorsolutions/nomlog/pkg/iterator"
 	"os"
 	"time"
 )

@@ -2,7 +2,7 @@ package iterator
 
 import (
 	"errors"
-	"github.com/saylorsolutions/slog/pkg/entries"
+	"github.com/saylorsolutions/nomlog/pkg/entries"
 )
 
 var _ Iterator = (*entryChannel)(nil)

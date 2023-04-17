@@ -1,7 +1,7 @@
 package iterator
 
 import (
-	"github.com/saylorsolutions/slog/pkg/entries"
+	"github.com/saylorsolutions/nomlog/pkg/entries"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

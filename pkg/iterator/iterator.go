@@ -3,7 +3,7 @@ package iterator
 import (
 	"context"
 	"errors"
-	"github.com/saylorsolutions/slog/pkg/entries"
+	"github.com/saylorsolutions/nomlog/pkg/entries"
 	"golang.org/x/sync/semaphore"
 )
 

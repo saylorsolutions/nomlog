@@ -1,4 +1,4 @@
-module github.com/saylorsolutions/slog
+module github.com/saylorsolutions/nomlog
 
 go 1.19
 
