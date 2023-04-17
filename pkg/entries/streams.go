@@ -1,6 +1,7 @@
 package entries
 
 // Merge will take over the passed in LogIterators and forward all LogEntry elements to the new LogIterator.
+// It's advised not to read from an iterator that has been passed to Merge.
 func Merge(a, b LogIterator) LogIterator {
 	aCh := NewIterationChannel(a)
 	bCh := NewIterationChannel(b)

@@ -1,14 +1,18 @@
 package file
 
 import (
+	"context"
+	"encoding/json"
 	"github.com/saylorsolutions/slog/pkg/entries"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestSource_Structured(t *testing.T) {
-	_tail, iter, err := source("structured.log")
+	_tail, iter, err := ctxSource(context.Background(), "structured.log")
 	require.NoError(t, err)
 	require.NotNil(t, _tail)
 	require.NotNil(t, iter)
@@ -43,7 +47,7 @@ func TestSource_Structured(t *testing.T) {
 }
 
 func TestSource_Unstructured(t *testing.T) {
-	_tail, iter, err := source("unstructured.log")
+	_tail, iter, err := ctxSource(context.Background(), "unstructured.log")
 	require.NoError(t, err)
 	require.NotNil(t, _tail)
 	require.NotNil(t, iter)
@@ -74,4 +78,35 @@ func TestSource_Unstructured(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, 3, count)
+}
+
+func TestSink(t *testing.T) {
+	td, err := os.MkdirTemp("", "TestSink-*")
+	require.NoError(t, err)
+	t.Log("Using temp directory:", td)
+	defer func() {
+		err := os.RemoveAll(td)
+		if err != nil {
+			t.Error("Failed to remove temp directory:", td)
+		} else {
+			t.Log("Removed temp directory")
+		}
+	}()
+
+	iter := entries.NewSliceIterator([]entries.LogEntry{
+		{
+			"A": "A",
+		},
+	})
+	err = Sink(iter, filepath.Join(td, "test.log"), 0600)
+	assert.NoError(t, err)
+
+	f, err := os.Open(filepath.Join(td, "test.log"))
+	require.NoError(t, err)
+	defer func() {
+		_ = f.Close()
+	}()
+	entry := entries.LogEntry{}
+	assert.NoError(t, json.NewDecoder(f).Decode(&entry))
+	assert.True(t, entry.HasField("A"), "Log entry wasn't written")
 }
