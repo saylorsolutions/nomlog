@@ -2,6 +2,7 @@ package entries
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strconv"
 	"time"
@@ -110,7 +111,7 @@ func (e LogEntry) AsString(name string) (string, bool) {
 	if err, ok := e[name].(error); ok {
 		return err.Error(), true
 	}
-	return "", false
+	return fmt.Sprintf("%v", e[name]), true
 }
 
 func (e LogEntry) AsTime(name string, format ...string) (time.Time, bool) {
@@ -137,6 +138,14 @@ func (e LogEntry) AsTime(name string, format ...string) (time.Time, bool) {
 		}
 	}
 	return none, false
+}
+
+func (e LogEntry) Format(format string, fields ...string) string {
+	args := make([]any, len(fields))
+	for i, f := range fields {
+		args[i] = e[f]
+	}
+	return fmt.Sprintf(format, args...)
 }
 
 func FromString(msg string) LogEntry {

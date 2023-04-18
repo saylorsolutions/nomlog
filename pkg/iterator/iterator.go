@@ -39,6 +39,10 @@ func (f Func) Iterate(iter func(entry entries.LogEntry, i int) error) error {
 			return err
 		}
 		if err := iter(entry, i); err != nil {
+			if errors.Is(err, ErrAtEnd) {
+				Drain(f)
+				return nil
+			}
 			return err
 		}
 	}

@@ -32,6 +32,10 @@ func (e *entryChannel) Iterate(iter func(entry entries.LogEntry, i int) error) e
 			return err
 		}
 		if err := iter(entry, i); err != nil {
+			if errors.Is(err, ErrAtEnd) {
+				Drain(e)
+				return nil
+			}
 			return err
 		}
 	}
