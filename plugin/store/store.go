@@ -31,6 +31,17 @@ func NewStore(log hclog.Logger, filename string) (*SqliteStore, error) {
 	}, nil
 }
 
+func (s *SqliteStore) QueryEntries(table string) (iterator.Iterator, error) {
+	if !tablePattern.MatchString(table) {
+		return nil, fmt.Errorf("%w: %s", ErrBadTable, table)
+	}
+	rows, err := s.db.Query("select * from " + table)
+	if err != nil {
+		return nil, err
+	}
+	return newQueryIterator(s.log, rows)
+}
+
 func (s *SqliteStore) Sink(iter iterator.Iterator, table string) error {
 	return s.SinkCtx(context.Background(), iter, table)
 }
@@ -42,7 +53,7 @@ var (
 
 func (s *SqliteStore) SinkCtx(ctx context.Context, iter iterator.Iterator, table string) error {
 	if !tablePattern.MatchString(table) {
-		return ErrBadTable
+		return fmt.Errorf("%w: %s", ErrBadTable, table)
 	}
 	s.log.Debug("Establishing connection")
 	conn, err := s.db.Conn(ctx)
@@ -106,15 +117,16 @@ func (s *SqliteStore) getTableColumns(ctx context.Context, conn *sql.Conn, table
 func (s *SqliteStore) sink(ctx context.Context, conn *sql.Conn, table string, iter iterator.Iterator, colMap map[string]bool) {
 	log := s.log.With("table", table).Named("sink")
 	cancelled := false
-	go func() {
-		<-ctx.Done()
-		log.Debug("Context cancelled")
-		cancelled = true
-	}()
 
 	defer func() {
 		_ = conn.Close()
 		log.Debug("DB connection closed")
+	}()
+
+	go func() {
+		<-ctx.Done()
+		log.Debug("Context cancelled")
+		cancelled = true
 	}()
 
 	err := iter.Iterate(func(entry entries.LogEntry, i int) error {

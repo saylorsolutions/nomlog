@@ -35,6 +35,41 @@ func TestSqliteStore_Sink(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestSqliteStore_QueryEntries(t *testing.T) {
+	iter := iterator.FromSlice([]entries.LogEntry{
+		{
+			"A":           "A",
+			"other-field": "value",
+		},
+		{
+			"A": "A",
+			"B": "B",
+		},
+		{
+			"A": "A",
+			"B": "B",
+			"C": "C",
+		},
+	})
+	log := hclog.Default()
+	log.SetLevel(hclog.Debug)
+	store, cleanup := _tempStore(t, log)
+	defer cleanup()
+	err := store.Sink(iter, "test")
+	require.NoError(t, err)
+
+	count := 0
+	iter, err = store.QueryEntries("test")
+	assert.NoError(t, err)
+	err = iter.Iterate(func(entry entries.LogEntry, i int) error {
+		count++
+		t.Log(entry)
+		return nil
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 3, count)
+}
+
 func _tempStore(t *testing.T, log hclog.Logger) (*SqliteStore, func()) {
 	td, err := os.MkdirTemp("", "_tempStore-*")
 	require.NoError(t, err)
