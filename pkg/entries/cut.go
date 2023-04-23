@@ -18,7 +18,7 @@ var (
 type cutOpts struct {
 	field        string
 	delimiter    rune
-	collector    func(entry LogEntry, fields []string) LogEntry
+	collector    func(entry LogEntry, fields []string) (collected LogEntry, remaining string)
 	removeSource bool
 }
 
@@ -40,7 +40,7 @@ func CutDelim(delim rune) CutOpt {
 }
 
 // CutCollector defines a function that will be used to stitch Cut fields into the message.
-func CutCollector(fn func(entry LogEntry, fields []string) LogEntry) CutOpt {
+func CutCollector(fn func(entry LogEntry, fields []string) (LogEntry, string)) CutOpt {
 	return func(opts *cutOpts) {
 		opts.collector = fn
 	}
@@ -70,22 +70,34 @@ func (c CutCollectSpec) Map(field string, idx int) CutCollectSpec {
 	return c
 }
 
-func (c CutCollectSpec) Collector() func(entry LogEntry, fields []string) LogEntry {
-	return func(entry LogEntry, fields []string) LogEntry {
+func (c CutCollectSpec) Collector() func(entry LogEntry, fields []string) (LogEntry, string) {
+	return func(entry LogEntry, fields []string) (LogEntry, string) {
+		var (
+			firstWrite = true
+			buf        strings.Builder
+		)
 		for i, f := range fields {
-			if fn, ok := c[i]; ok {
+			fn, ok := c[i]
+			switch {
+			case ok:
 				fn(entry, f)
+			case !firstWrite:
+				buf.WriteString(" ")
+				fallthrough
+			default:
+				firstWrite = false
+				buf.WriteString(f)
 			}
 		}
-		return entry
+		return entry, buf.String()
 	}
 }
 
-func defaultCutCollector(entry LogEntry, fields []string) LogEntry {
+func defaultCutCollector(entry LogEntry, fields []string) (LogEntry, string) {
 	for i, f := range fields {
 		entry[strconv.Itoa(i)] = f
 	}
-	return entry
+	return entry, ""
 }
 
 // Cut allows programmatically parsing out a log message into more atomic parts by splitting on one or more instances of delimiter, much like the unix cut command.
@@ -109,9 +121,11 @@ func Cut(entry LogEntry, opt ...CutOpt) (LogEntry, error) {
 			return entry, ErrNotACutString
 		}
 		fields := strings.Split(str, string([]rune{opts.delimiter}))
-		opts.collector(entry, fields)
+		entry, remaining := opts.collector(entry, fields)
 		if opts.removeSource {
 			delete(entry, opts.field)
+		} else {
+			entry[opts.field] = remaining
 		}
 	}
 	return entry, nil

@@ -37,7 +37,7 @@ func TestCut(t *testing.T) {
 
 func TestCut_DefaultOpts(t *testing.T) {
 	entry := LogEntry{
-		StandardMessageField: "a b c",
+		StandardMessageField: "a b c d",
 	}
 	entry, err := Cut(entry)
 	assert.NoError(t, err)
@@ -51,5 +51,38 @@ func TestCut_DefaultOpts(t *testing.T) {
 	c, ok := entry.AsString("2")
 	assert.True(t, ok, "Should have a new field '2'")
 	assert.Equal(t, "c", c)
-	assert.True(t, entry.HasField(StandardMessageField), "Standard message field should NOT be removed after cutting")
+	msg, ok := entry.AsString(StandardMessageField)
+	assert.True(t, ok, "Standard message field should NOT be removed after cutting")
+	assert.Equal(t, "", msg)
+}
+
+func TestCut_WithRemainder(t *testing.T) {
+	entry := LogEntry{
+		StandardMessageField: "a b c d e",
+	}
+	entry, err := Cut(entry,
+		CutDelim(' '),
+		CutField(StandardMessageField),
+		CutCollector(
+			NewCutCollectSpec().
+				Map("a", 0).
+				Map("b", 1).
+				Map("c", 2).
+				Collector(),
+		),
+	)
+	assert.NoError(t, err)
+
+	a, ok := entry.AsString("a")
+	assert.True(t, ok, "Should have a new field 'a'")
+	assert.Equal(t, "a", a)
+	b, ok := entry.AsString("b")
+	assert.True(t, ok, "Should have a new field 'b'")
+	assert.Equal(t, "b", b)
+	c, ok := entry.AsString("c")
+	assert.True(t, ok, "Should have a new field 'c'")
+	assert.Equal(t, "c", c)
+	msg, ok := entry.AsString(StandardMessageField)
+	assert.True(t, ok, "Standard message field should be present")
+	assert.Equal(t, "d e", msg, "Message remainder should be present in the field")
 }
