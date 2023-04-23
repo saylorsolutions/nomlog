@@ -151,7 +151,7 @@ func (e LogEntry) Format(format string, fields ...string) string {
 func FromString(msg string) LogEntry {
 	entry := LogEntry{}
 	if err := json.Unmarshal([]byte(msg), &entry); err != nil {
-		entry["@message"] = msg
+		entry[StandardMessageField] = msg
 	}
 	return entry
 }
