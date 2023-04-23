@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+const (
+	StandardMessageField   = "@message"
+	StandardTimestampField = "@timestamp"
+	StandardLevelField     = "@level"
+	StandardModuleField    = "@module"
+	StandardCallerField    = "@caller"
+)
+
 // LogEntry is a single entry in a log, with potentially many fields.
 type LogEntry map[string]any
 

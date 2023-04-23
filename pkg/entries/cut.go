@@ -6,11 +6,6 @@ import (
 	"strings"
 )
 
-const (
-	StandardMessageField   = "@message"
-	StandardTimestampField = "@timestamp"
-)
-
 var (
 	ErrNotACutString = errors.New("field is not a cuttable string")
 )
