@@ -97,6 +97,7 @@ func defaultCutCollector(entry LogEntry, fields []string) (LogEntry, string) {
 
 // Cut allows programmatically parsing out a log message into more atomic parts by splitting on one or more instances of delimiter, much like the unix cut command.
 // Cut assumes it should be parsing the StandardMessageField with a space character unless overridden.
+// The source field must be a string for Cut to operate as intended.
 func Cut(entry LogEntry, opt ...CutOpt) (LogEntry, error) {
 	opts := &cutOpts{
 		field:        StandardMessageField,
