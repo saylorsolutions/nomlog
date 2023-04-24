@@ -1,6 +1,6 @@
 module github.com/saylorsolutions/nomlog
 
-go 1.19
+go 1.18
 
 require (
 	github.com/hashicorp/go-hclog v1.5.0
