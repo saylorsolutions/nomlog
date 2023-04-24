@@ -13,7 +13,7 @@ import (
 )
 
 func TestSource_Structured(t *testing.T) {
-	_tail, iter, err := ctxSource(context.Background(), "structured.log")
+	_tail, iter, err := ctxTailSource(context.Background(), "structured.log")
 	require.NoError(t, err)
 	require.NotNil(t, _tail)
 	require.NotNil(t, iter)
@@ -48,7 +48,7 @@ func TestSource_Structured(t *testing.T) {
 }
 
 func TestSource_Unstructured(t *testing.T) {
-	_tail, iter, err := ctxSource(context.Background(), "unstructured.log")
+	_tail, iter, err := ctxTailSource(context.Background(), "unstructured.log")
 	require.NoError(t, err)
 	require.NotNil(t, _tail)
 	require.NotNil(t, iter)
@@ -110,4 +110,47 @@ func TestSink(t *testing.T) {
 	entry := entries.LogEntry{}
 	assert.NoError(t, json.NewDecoder(f).Decode(&entry))
 	assert.True(t, entry.HasField("A"), "Log entry wasn't written")
+}
+
+func TestSource(t *testing.T) {
+	text := `abc
+def
+ghi
+`
+	tmp, err := os.MkdirTemp("", "TestSource-*")
+	require.NoError(t, err)
+	t.Log("Using", tmp, "for this test")
+	defer func() {
+		err := os.RemoveAll(tmp)
+		if err != nil {
+			t.Error("Failed to remove temp dir", err)
+		}
+		t.Log("Successfully removed", tmp)
+	}()
+
+	testFile := filepath.Join(tmp, "test.txt")
+	err = os.WriteFile(testFile, []byte(text), 0600)
+	require.NoError(t, err)
+
+	iter, err := Source(testFile)
+	assert.NoError(t, err)
+	assert.NotNil(t, iter)
+
+	var result string
+	err = iter.Iterate(func(entry entries.LogEntry, i int) error {
+		msg, ok := entry.AsString(entries.StandardMessageField)
+		if !ok {
+			t.Errorf("Entry %d should have a '%s' field", i, entries.StandardMessageField)
+		}
+		result += msg
+		return nil
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "abcdefghi", result)
+}
+
+func TestSource_DoesNotExist(t *testing.T) {
+	iter, err := Source("blurbadurben.text.log.yaml.log")
+	assert.Error(t, err)
+	assert.Nil(t, iter)
 }
