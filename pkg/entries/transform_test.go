@@ -8,10 +8,9 @@ import (
 
 func TestTransform(t *testing.T) {
 	tests := map[string]struct {
-		value         any
-		expected      any
-		transforms    []transFunc
-		strTransforms []func(string) string
+		value      any
+		expected   any
+		transforms []transFunc
 	}{
 		"No transformation": {
 			value:    "5",
@@ -20,10 +19,10 @@ func TestTransform(t *testing.T) {
 		"trim transform": {
 			value:    " \t\nwith spaces \t\n",
 			expected: "with spaces",
-			strTransforms: []func(string) string{
-				func(s string) string {
+			transforms: []transFunc{
+				TransformType(func(s string) string {
 					return strings.TrimSpace(s)
-				},
+				}),
 			},
 		},
 		"Nil transform": {
@@ -34,11 +33,11 @@ func TestTransform(t *testing.T) {
 		"String from number": {
 			value:    5,
 			expected: 5,
-			strTransforms: []func(string) string{
-				func(s string) string {
+			transforms: []transFunc{
+				TransformType(func(s string) string {
 					t.Error("String transform shouldn't run on non-string value")
 					return s
-				},
+				}),
 			},
 		},
 		"Number transform": {
@@ -79,9 +78,6 @@ func TestTransform(t *testing.T) {
 
 			for _, tf := range tc.transforms {
 				spec.Transform("value", tf)
-			}
-			for _, stf := range tc.strTransforms {
-				spec.TransformString("value", stf)
 			}
 			t.Logf("Initial value: '%v' with type %[1]T", entry["value"])
 			result := Transform(entry, spec)

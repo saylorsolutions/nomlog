@@ -38,18 +38,17 @@ func (s TransformSpec) Transform(field SubjectField, trans transFunc) TransformS
 	return s
 }
 
-// TransformString will append a Transform for the named field if it contains a string.
-func (s TransformSpec) TransformString(field SubjectField, trans func(val string) string) TransformSpec {
-	s[field] = s[field].then(func(val any) any {
-		if s, ok := val.(string); ok {
-			return trans(s)
+func TransformType[T any](trans func(val T) T) func(any) any {
+	return func(a any) any {
+		if a == nil {
+			return a
 		}
-		return val
-	})
-	return s
+		if v, ok := a.(T); ok {
+			return trans(v)
+		}
+		return a
+	}
 }
-
-// TODO: Add more support for typed transforms.
 
 func Transform(entry LogEntry, spec TransformSpec) LogEntry {
 	for field, trans := range spec {
