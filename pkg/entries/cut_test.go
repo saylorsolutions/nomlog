@@ -86,3 +86,38 @@ func TestCut_WithRemainder(t *testing.T) {
 	assert.True(t, ok, "Standard message field should be present")
 	assert.Equal(t, "d e", msg, "Message remainder should be present in the field")
 }
+
+func TestCut_WithNegativeIndex(t *testing.T) {
+	entry := LogEntry{
+		StandardMessageField: "a b c d e",
+	}
+	entry, err := Cut(entry,
+		CutDelim(' '),
+		CutField(StandardMessageField),
+		CutCollector(
+			NewCutCollectSpec().
+				Map("a", -5).
+				Map("b", -4).
+				Map("c", -3).
+				Map("e", -1).
+				Collector(),
+		),
+	)
+	assert.NoError(t, err)
+
+	a, ok := entry.AsString("a")
+	assert.True(t, ok, "Should have a new field 'a'")
+	assert.Equal(t, "a", a)
+	b, ok := entry.AsString("b")
+	assert.True(t, ok, "Should have a new field 'b'")
+	assert.Equal(t, "b", b)
+	c, ok := entry.AsString("c")
+	assert.True(t, ok, "Should have a new field 'c'")
+	assert.Equal(t, "c", c)
+	e, ok := entry.AsString("e")
+	assert.True(t, ok, "Should have a new field 'e'")
+	assert.Equal(t, "e", e)
+	msg, ok := entry.AsString(StandardMessageField)
+	assert.True(t, ok, "Standard message field should be present")
+	assert.Equal(t, "d", msg, "Message remainder should be present in the field")
+}

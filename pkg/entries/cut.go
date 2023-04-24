@@ -58,6 +58,8 @@ func NewCutCollectSpec() CutCollectSpec {
 
 // Map will copy the Cut field at idx to field.
 // Map calls can override each other by specifying the same field and/or idx multiple times.
+// Map can accept negative indexes to refer to fields at the end of a line of text, starting with -1.
+// Any value set by a mapping may be overridden by another mapping. Ensure that all calls to Map reference any given field only once.
 func (c CutCollectSpec) Map(field string, idx int) CutCollectSpec {
 	c[idx] = func(entry LogEntry, value string) {
 		entry[field] = value
@@ -73,9 +75,16 @@ func (c CutCollectSpec) Collector() func(entry LogEntry, fields []string) (LogEn
 		)
 		for i, f := range fields {
 			fn, ok := c[i]
+			inverseIdx := i - len(fields)
+			ifn, iok := c[inverseIdx]
 			switch {
-			case ok:
-				fn(entry, f)
+			case ok, iok:
+				if ok {
+					fn(entry, f)
+				}
+				if iok {
+					ifn(entry, f)
+				}
 			case !firstWrite:
 				buf.WriteString(" ")
 				fallthrough
