@@ -23,6 +23,8 @@ type Iterator interface {
 
 var _ Iterator = (Func)(nil)
 
+// Func provides a quicker way to implement an Iterator.
+// A Func implements Iterator.Next, and implicitly provides a base Iterate implementation.
 type Func func() (entries.LogEntry, int, error)
 
 func (f Func) Next() (entries.LogEntry, int, error) {
@@ -83,7 +85,7 @@ func AsChannel(iter Iterator) <-chan entries.LogEntry {
 	return ch
 }
 
-// Merge will take over the passed in LogIterators and forward all LogEntry elements to the new Iterator.
+// Merge will take over the passed in iterators and forward all log entries elements to the new Iterator.
 // It's advised not to read from an iterator that has been passed to Merge.
 func Merge(a, b Iterator) Iterator {
 	aCh := AsChannel(a)
@@ -114,10 +116,10 @@ func Merge(a, b Iterator) Iterator {
 	return out
 }
 
-// Dupe will take control of and branch the duplicate Iterator into two identical LogIterators.
-// Any LogEntry posted to the source Iterator will be sent to both of the new LogIterators.
+// Dupe will take control of and branch the duplicate Iterator into two identical iterators.
+// Any LogEntry posted to the source Iterator will be sent to both of the new iterators.
 // This is useful in a case similar to when you want to print messages as well as write them to a file.
-// It's not advised to read from an Iterator that has been passed to Dupe, use one of the returned LogIterators instead.
+// It's not advised to read from an Iterator that has been passed to Dupe, use one of the returned iterators instead.
 func Dupe(iter Iterator) (Iterator, Iterator) {
 	if iter == nil {
 		return Empty(), Empty()
