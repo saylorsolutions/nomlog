@@ -14,6 +14,8 @@ func (fn transFunc) then(after transFunc) transFunc {
 	}
 }
 
+// TransformSpec contains the transform functions for any given field in a LogEntry.
+// If the field is not found or is nil, then the transform function will not be executed.
 type TransformSpec map[SubjectField]transFunc
 
 func NewTransformSpec() TransformSpec {
@@ -38,6 +40,8 @@ func (s TransformSpec) Transform(field SubjectField, trans transFunc) TransformS
 	return s
 }
 
+// TransformType will create a transform function that first asserts that the field type matches the expected type for the given transform function.
+// If the types don't match, then the transform function will not be called.
 func TransformType[T any](trans func(val T) T) func(any) any {
 	return func(a any) any {
 		if a == nil {
@@ -50,6 +54,7 @@ func TransformType[T any](trans func(val T) T) func(any) any {
 	}
 }
 
+// Transform transforms field values according to the given TransformSpec.
 func Transform(entry LogEntry, spec TransformSpec) LogEntry {
 	for field, trans := range spec {
 		if trans == nil {
