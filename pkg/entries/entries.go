@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+const (
+	StandardMessageField   = "@message"
+	StandardTimestampField = "@timestamp"
+	StandardLevelField     = "@level"
+	StandardModuleField    = "@module"
+	StandardCallerField    = "@caller"
+)
+
 // LogEntry is a single entry in a log, with potentially many fields.
 type LogEntry map[string]any
 
@@ -151,7 +159,7 @@ func (e LogEntry) Format(format string, fields ...string) string {
 func FromString(msg string) LogEntry {
 	entry := LogEntry{}
 	if err := json.Unmarshal([]byte(msg), &entry); err != nil {
-		entry["@message"] = msg
+		entry[StandardMessageField] = msg
 	}
 	return entry
 }
