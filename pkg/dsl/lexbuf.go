@@ -16,6 +16,7 @@ type lexBuf struct {
 	buf      []rune
 	r        io.RuneReader
 	pos      int
+	line     int
 }
 
 func newLexBuf(reader io.RuneReader) *lexBuf {
@@ -24,8 +25,10 @@ func newLexBuf(reader io.RuneReader) *lexBuf {
 
 func newLexBufSize(reader io.RuneReader, size int) *lexBuf {
 	return &lexBuf{
-		r:   reader,
-		buf: make([]rune, size),
+		r:    reader,
+		buf:  make([]rune, size),
+		line: 1,
+		pos:  1,
 	}
 }
 

@@ -13,7 +13,7 @@ import (
 type lexType int
 
 const (
-	tEof lexType = iota
+	tEof lexType = iota + 1
 	tErr
 	tEol
 	tString
@@ -50,6 +50,7 @@ var (
 
 type token struct {
 	Pos  int
+	Line int
 	Text string
 	Type lexType
 }
@@ -82,7 +83,8 @@ func lexReader(r io.Reader) *lexer {
 }
 
 func (l *lexer) postToken(t lexType) {
-	l.tokens <- token{l.pos, l.consume(), t}
+	text := l.consume()
+	l.tokens <- token{l.pos - len(text), l.line, text, t}
 }
 
 func (l *lexer) handleLexErr(err error) {
@@ -116,6 +118,8 @@ func (l *lexer) lex() {
 		switch {
 		case c == '\n':
 			l.postToken(tEol)
+			l.line++
+			l.pos = 1
 		case c == '"':
 			if err := l.readString(); err != nil {
 				l.handleLexErr(err)
