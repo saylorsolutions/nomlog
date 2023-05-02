@@ -71,3 +71,23 @@ func TestLexBuf_Unread(t *testing.T) {
 	buf.unread()
 	assert.Equal(t, 1, buf.readPtr)
 }
+
+func TestLexBuf_Accept(t *testing.T) {
+	slc := []rune{'a', 'b', 'c', 'd', 'e', 'f', 'g'}
+	rr := bufio.NewReader(strings.NewReader(string(slc)))
+	buf := newLexBuf(rr)
+
+	accepted := buf.accept("abd")
+	assert.True(t, accepted, "Accept should have found a match")
+	assert.Equal(t, "ab", buf.consume())
+}
+
+func TestLexBuf_AcceptOne(t *testing.T) {
+	slc := []rune{'a', 'b', 'c', 'd', 'e', 'f', 'g'}
+	rr := bufio.NewReader(strings.NewReader(string(slc)))
+	buf := newLexBuf(rr)
+
+	accepted := buf.acceptOne("cab")
+	assert.True(t, accepted, "Accept should have found a match")
+	assert.Equal(t, "a", buf.consume())
+}

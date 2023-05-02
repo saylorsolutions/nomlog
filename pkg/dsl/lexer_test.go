@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -83,6 +84,96 @@ func TestLexFile(t *testing.T) {
 		require.Equalf(t, expected[i], tok.Type, "token %d mismatch: %s", i, tok.Text)
 	}
 	assert.Len(t, tokens, len(expected))
+}
+
+func TestLexer_ReadNumber(t *testing.T) {
+	tests := map[string]struct {
+		input    string
+		expected string
+		found    bool
+		typ      lexType
+	}{
+		"Integer": {
+			input:    "123",
+			expected: "123",
+			found:    true,
+			typ:      tInt,
+		},
+		"Negative Integer": {
+			input:    "-123",
+			expected: "-123",
+			found:    true,
+			typ:      tInt,
+		},
+		"Number": {
+			input:    "123.01",
+			expected: "123.01",
+			found:    true,
+			typ:      tNumber,
+		},
+		"Negative Number": {
+			input:    "-123.01",
+			expected: "-123.01",
+			found:    true,
+			typ:      tNumber,
+		},
+		"Integer with suffix": {
+			input:    "123abc",
+			expected: "123",
+			found:    true,
+			typ:      tInt,
+		},
+		"Negative Integer with suffix": {
+			input:    "-123abc",
+			expected: "-123",
+			found:    true,
+			typ:      tInt,
+		},
+		"Number with suffix": {
+			input:    "123.01abc",
+			expected: "123.01",
+			found:    true,
+			typ:      tNumber,
+		},
+		"Negative Number with suffix": {
+			input:    "-123.01abc",
+			expected: "-123.01",
+			found:    true,
+			typ:      tNumber,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			l := lexString(tc.input)
+			var (
+				err    error
+				wg     sync.WaitGroup
+				tokens []token
+			)
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				defer close(l.tokens)
+				err = l.readNumber()
+			}()
+			go func() {
+				defer wg.Done()
+				tokens = consume(l.tokens)
+			}()
+			wg.Wait()
+			assert.Equal(t, tc.found, err == nil)
+			if err == nil {
+				assert.Len(t, tokens, 1)
+				if len(tokens) > 0 {
+					assert.Equal(t, tc.expected, tokens[0].Text)
+					assert.Equal(t, tc.typ, tokens[0].Type)
+				}
+			}
+		})
+	}
 }
 
 func consume(ch <-chan token) []token {

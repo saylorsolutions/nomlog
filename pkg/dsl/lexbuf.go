@@ -142,3 +142,38 @@ func (b *lexBuf) readUntilWhitespaceOrBreak() error {
 		}
 	}
 }
+
+func (b *lexBuf) accept(patternStr string) bool {
+	var (
+		m     = map[rune]bool{}
+		found bool
+	)
+	for _, r := range []rune(patternStr) {
+		m[r] = true
+	}
+	for r, err := b.read(); ; r, err = b.read() {
+		if err != nil {
+			return found
+		}
+		if !m[r] {
+			b.unread()
+			return found
+		}
+		found = true
+	}
+}
+
+func (b *lexBuf) acceptOne(patternStr string) bool {
+	m := map[rune]bool{}
+	for _, r := range []rune(patternStr) {
+		m[r] = true
+	}
+	r, err := b.read()
+	if err != nil {
+		return false
+	}
+	if !m[r] {
+		b.unread()
+	}
+	return m[r]
+}

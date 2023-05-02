@@ -8,6 +8,7 @@ type tokenStream struct {
 	ch  <-chan token
 	buf [streamSize]token
 	idx int
+	err *token
 }
 
 func newTokenStream(ch <-chan token) *tokenStream {
@@ -23,6 +24,9 @@ func (s *tokenStream) peek() token {
 }
 
 func (s *tokenStream) next() token {
+	if s.err != nil {
+		return *s.err
+	}
 	if s.idx > 0 {
 		s.idx--
 		return s.buf[s.idx]
@@ -30,6 +34,14 @@ func (s *tokenStream) next() token {
 	t, ok := <-s.ch
 	if !ok {
 		return token{Type: tEof}
+	}
+	if t.Type == tErr {
+		s.err = &t
+		go func() {
+			for range s.ch {
+			}
+		}()
+		return t
 	}
 	return t
 }

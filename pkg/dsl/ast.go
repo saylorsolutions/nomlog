@@ -73,10 +73,9 @@ func consumeTokens(ch <-chan token) {
 
 func (p *parser) parse() ([]AstNode, error) {
 	var (
-		str   *tokenStream
+		str   = p.l.stream()
 		nodes []AstNode
 	)
-	str = newTokenStream(p.l.tokens)
 	go func() {
 		p.l.lex()
 	}()
@@ -144,7 +143,7 @@ func (p *parser) parse() ([]AstNode, error) {
 }
 
 func unexpected(t token, expected ...string) error {
-	expect := "expected one of " + strings.Join(expected, ", ")
+	expect := "one of " + strings.Join(expected, ", ")
 	return fmt.Errorf("%w: expected %s at line %d position %d", ErrUnexpectedToken, expect, t.Line, t.Pos)
 }
 
@@ -189,6 +188,18 @@ func (a *ast) setVals(t token, typ AstType) {
 	a.AstPos = t.Pos
 	a.AstText = t.Text
 	a.AstType = typ
+}
+func (a *ast) append(t token) {
+	a.AstText += t.Text
+}
+func (a *ast) appendSpace(t token) {
+	a.AstText += " " + t.Text
+}
+func (a *ast) appendText(s string) {
+	a.AstText += s
+}
+func (a *ast) appendTextSpace(s string) {
+	a.AstText += " " + s
 }
 
 type parser struct {
@@ -333,6 +344,7 @@ func (p *parser) parseSourceClass(str *tokenStream) (*SourceClass, error) {
 		str.pushBack(dot, qual)
 		return nil, unexpected(dot, "dot separator")
 	}
+	sc.append(dot)
 
 	id := str.next()
 	if id.Type != tIdentifier {
@@ -340,6 +352,7 @@ func (p *parser) parseSourceClass(str *tokenStream) (*SourceClass, error) {
 		return nil, unexpected(id, "source class identifier")
 	}
 	sc.SourceClass = id.Text
+	sc.append(id)
 	return sc, nil
 }
 
@@ -363,6 +376,7 @@ func (p *parser) parseSource(str *tokenStream) (*Source, error) {
 	if as.Type != tAs {
 		return nil, unexpected(as, "as")
 	}
+	src.appendSpace(as)
 	id := str.next()
 	if id.Type != tIdentifier {
 		return nil, unexpected(id, "source identifier")
@@ -372,18 +386,27 @@ func (p *parser) parseSource(str *tokenStream) (*Source, error) {
 	}
 	p.sources[id.Text] = true
 	src.ID = id.Text
+	src.appendSpace(id)
 
 	sc, err := p.parseSourceClass(str)
 	if err != nil {
 		return nil, err
 	}
 	src.Class = sc
+	src.appendTextSpace(sc.AstText)
 
 	args, err := p.parseArgs(str)
 	if err != nil {
 		return nil, err
 	}
 	src.Args = args
+
+	for i, a := range args {
+		if i > 0 {
+			src.appendText(",")
+		}
+		src.appendTextSpace(a.AstText)
+	}
 
 	_, err = p.parseRequiredEol(str)
 	if err != nil {
@@ -413,6 +436,7 @@ func (p *parser) parseSinkClass(str *tokenStream) (*SinkClass, error) {
 		str.pushBack(dot, qual)
 		return nil, unexpected(dot, "dot separator")
 	}
+	sc.append(dot)
 
 	id := str.next()
 	if id.Type != tIdentifier {
@@ -420,6 +444,7 @@ func (p *parser) parseSinkClass(str *tokenStream) (*SinkClass, error) {
 		return nil, unexpected(id, "sink class identifier")
 	}
 	sc.SinkClass = id.Text
+	sc.append(id)
 	return sc, nil
 }
 
@@ -453,14 +478,17 @@ func (p *parser) parseSink(str *tokenStream) (*Sink, error) {
 	}
 	sink.Source = iterID.Text
 	p.consumed[iterID.Text] = true
+	sink.appendSpace(iterID)
 
 	asyncTo := str.next()
 	if asyncTo.Type == tAsync {
 		sink.AstType = ASYNC_SINK
+		sink.appendSpace(asyncTo)
 		as := str.next()
 		if as.Type != tAs {
 			return nil, unexpected(as, "as")
 		}
+		sink.appendSpace(as)
 		id := str.next()
 		if id.Type != tIdentifier {
 			return nil, unexpected(id, "sink identifier")
@@ -473,13 +501,17 @@ func (p *parser) parseSink(str *tokenStream) (*Sink, error) {
 		}
 		sink.ID = id.Text
 		p.sinks[id.Text] = true
+		sink.appendSpace(id)
 
 		to := str.next()
 		if to.Type != tTo {
 			return nil, unexpected(to, "to")
 		}
+		sink.appendSpace(to)
 	} else if asyncTo.Type != tTo {
 		return nil, unexpected(asyncTo, "to", "async")
+	} else {
+		sink.appendSpace(asyncTo)
 	}
 
 	sc, err := p.parseSinkClass(str)
@@ -487,12 +519,20 @@ func (p *parser) parseSink(str *tokenStream) (*Sink, error) {
 		return nil, err
 	}
 	sink.Class = sc
+	sink.appendTextSpace(sc.AstText)
 
 	args, err := p.parseArgs(str)
 	if err != nil {
 		return nil, err
 	}
 	sink.Args = args
+
+	for i, a := range args {
+		if i > 0 {
+			sink.appendText(",")
+		}
+		sink.appendTextSpace(a.AstText)
+	}
 
 	_, err = p.parseRequiredEol(str)
 	if err != nil {
@@ -529,11 +569,13 @@ func (p *parser) parseMerge(str *tokenStream) (*Merge, error) {
 	}
 	p.consumed[a.Text] = true
 	merge.SourceA = a.Text
+	merge.appendSpace(a)
 
 	and := str.next()
 	if and.Type != tAnd {
 		return nil, unexpected(and, "and")
 	}
+	merge.appendSpace(and)
 
 	b := str.next()
 	if b.Type != tIdentifier {
@@ -547,11 +589,13 @@ func (p *parser) parseMerge(str *tokenStream) (*Merge, error) {
 	}
 	p.consumed[b.Text] = true
 	merge.SourceB = b.Text
+	merge.appendSpace(b)
 
 	as := str.next()
 	if as.Type != tAs {
 		return nil, unexpected(as, "as")
 	}
+	merge.appendSpace(as)
 
 	id := str.next()
 	if id.Type != tIdentifier {
@@ -562,6 +606,7 @@ func (p *parser) parseMerge(str *tokenStream) (*Merge, error) {
 	}
 	merge.ID = id.Text
 	p.sources[id.Text] = true
+	merge.appendSpace(id)
 
 	_, err := p.parseRequiredEol(str)
 	if err != nil {
@@ -598,11 +643,13 @@ func (p *parser) parseDupe(str *tokenStream) (*Dupe, error) {
 	}
 	p.consumed[src.Text] = true
 	dupe.Source = src.Text
+	dupe.appendSpace(src)
 
 	as := str.next()
 	if as.Type != tAs {
 		return nil, unexpected(as, "as")
 	}
+	dupe.appendSpace(as)
 
 	a := str.next()
 	if a.Type != tIdentifier {
@@ -613,11 +660,13 @@ func (p *parser) parseDupe(str *tokenStream) (*Dupe, error) {
 	}
 	dupe.TargetA = a.Text
 	p.sources[a.Text] = true
+	dupe.appendSpace(a)
 
 	and := str.next()
 	if and.Type != tAnd {
 		return nil, unexpected(and, "and")
 	}
+	dupe.appendSpace(and)
 
 	b := str.next()
 	if b.Type != tIdentifier {
@@ -628,6 +677,7 @@ func (p *parser) parseDupe(str *tokenStream) (*Dupe, error) {
 	}
 	dupe.TargetB = b.Text
 	p.sources[b.Text] = true
+	dupe.appendSpace(b)
 
 	_, err := p.parseRequiredEol(str)
 	if err != nil {
@@ -663,11 +713,13 @@ func (p *parser) parseAppend(str *tokenStream) (*Append, error) {
 	}
 	apnd.Source = src.Text
 	p.consumed[src.Text] = true
+	apnd.appendSpace(src)
 
 	to := str.next()
 	if to.Type != tTo {
 		return nil, unexpected(to, "to")
 	}
+	apnd.appendSpace(to)
 
 	trg := str.next()
 	if trg.Type != tIdentifier {
@@ -677,6 +729,7 @@ func (p *parser) parseAppend(str *tokenStream) (*Append, error) {
 		return nil, semantic(trg, errUndefined(trg.Text))
 	}
 	apnd.Target = trg.Text
+	apnd.appendSpace(trg)
 
 	_, err := p.parseRequiredEol(str)
 	if err != nil {
@@ -705,11 +758,13 @@ func (p *parser) parseCut(str *tokenStream) (*Cut, error) {
 
 	withId := str.next()
 	if withId.Type == tWith {
+		cut.appendSpace(withId)
 		s := str.next()
 		if s.Type != tString {
 			return nil, unexpected(s, "string delimiter")
 		}
 		cut.Delimiter = escapeString(s.Text)
+		cut.appendSpace(s)
 		withId = str.next()
 	}
 	if withId.Type != tIdentifier {
@@ -719,16 +774,19 @@ func (p *parser) parseCut(str *tokenStream) (*Cut, error) {
 		return nil, semantic(withId, errAlreadyConsumed(withId.Text))
 	}
 	cut.Source = withId.Text
+	cut.appendSpace(withId)
 
 	set := str.next()
 	if set.Type != tSet {
 		return nil, unexpected(set, "set")
 	}
+	cut.appendSpace(set)
 
 	lp := str.next()
 	if lp.Type != tLpar {
 		return nil, unexpected(lp, "(")
 	}
+	cut.appendSpace(lp)
 
 loop:
 	for first := true; ; first = false {
@@ -736,7 +794,9 @@ loop:
 			commaParen := str.next()
 			switch commaParen.Type {
 			case tComma:
+				cut.append(commaParen)
 			case tRpar:
+				cut.append(commaParen)
 				break loop
 			default:
 				return nil, unexpected(commaParen, ",", ")")
@@ -766,6 +826,13 @@ loop:
 			return nil, err
 		}
 		cut.FieldSets[id.Text] = i
+		if first {
+			cut.append(id)
+		} else {
+			cut.appendSpace(id)
+		}
+		cut.appendSpace(eq)
+		cut.appendSpace(num)
 	}
 
 	_, err := p.parseRequiredEol(str)
@@ -803,11 +870,13 @@ func (p *parser) parseFanout(str *tokenStream) (*Fanout, error) {
 	}
 	fanout.Source = src.Text
 	p.consumed[src.Text] = true
+	fanout.appendSpace(src)
 
 	as := str.next()
 	if as.Type != tAs {
 		return nil, unexpected(as, "as")
 	}
+	fanout.appendSpace(as)
 
 	a := str.next()
 	if a.Type != tIdentifier {
@@ -818,11 +887,13 @@ func (p *parser) parseFanout(str *tokenStream) (*Fanout, error) {
 	}
 	fanout.TargetA = a.Text
 	p.sources[a.Text] = true
+	fanout.appendSpace(a)
 
 	and := str.next()
 	if and.Type != tAnd {
 		return nil, unexpected(and, "and")
 	}
+	fanout.appendSpace(and)
 
 	b := str.next()
 	if b.Type != tIdentifier {
@@ -833,6 +904,7 @@ func (p *parser) parseFanout(str *tokenStream) (*Fanout, error) {
 	}
 	fanout.TargetB = b.Text
 	p.sources[b.Text] = true
+	fanout.appendSpace(b)
 
 	_, err := p.parseRequiredEol(str)
 	if err != nil {

@@ -6,7 +6,7 @@ This describes the grammar associated with nomlog files.
 ```
 EOL        := "\n"
 STRING     := """ '.*' """
-NUMBER     := '\d+(\.\d+)?'
+NUMBER     := '-?\d+(\.\d+)?'
 LPAR       := "("
 RPAR       := ")"
 INT        := '\d+'

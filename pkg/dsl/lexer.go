@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"strings"
 )
 
@@ -41,11 +40,17 @@ const (
 	tFanout
 )
 
+const (
+	alpha       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	number      = "0123456789"
+	idStart     = alpha
+	idRemainder = alpha + number + "_"
+)
+
 var (
-	digitRegex             = regexp.MustCompile(`^\d$`)
-	idRegex                = regexp.MustCompile(`^\w(\w|\d)*$`)
 	ErrNoDigitAfterDecimal = errors.New("missing digit(s) after decimal")
 	ErrUnknownToken        = errors.New("unknown token")
+	ErrInvalidNumber       = errors.New("invalid number")
 )
 
 type token struct {
@@ -90,14 +95,25 @@ func (l *lexer) postToken(t lexType) {
 func (l *lexer) handleLexErr(err error) {
 	l.err = err
 	if err == io.EOF {
-		l.tokens <- token{Pos: l.pos, Text: "", Type: tEof}
+		l.tokens <- token{Pos: l.pos, Line: l.line, Text: "", Type: tEof}
 		return
 	}
-	l.tokens <- token{Pos: l.pos, Text: err.Error(), Type: tErr}
+	text := l.consume()
+	text = ": '" + text + "'"
+	l.tokens <- token{Pos: l.pos, Line: l.line, Text: err.Error() + text, Type: tErr}
 }
 
 func (l *lexer) isDigit(r rune) bool {
-	return digitRegex.MatchString(string(r))
+	digits := "0123456789"
+	m := map[rune]bool{}
+	for _, r := range []rune(digits) {
+		m[r] = true
+	}
+	return m[r]
+}
+
+func (l *lexer) stream() *tokenStream {
+	return newTokenStream(l.tokens)
 }
 
 func (l *lexer) lex() {
@@ -125,8 +141,9 @@ func (l *lexer) lex() {
 				l.handleLexErr(err)
 				return
 			}
-		case l.isDigit(c):
-			if err := l.readInt(); err != nil {
+		case c == '-' || l.isDigit(c):
+			l.unread()
+			if err := l.readNumber(); err != nil {
 				l.handleLexErr(err)
 				return
 			}
@@ -151,60 +168,46 @@ func (l *lexer) lex() {
 
 func (l *lexer) readString() error {
 	for {
+		var lineAdd int
 		c, err := l.read()
 		if err != nil {
+			l.line += lineAdd
+			if err == io.EOF {
+				return fmt.Errorf("%w: unterminated string", err)
+			}
 			return err
 		}
 		switch {
 		case c == '\\':
 			_, err := l.read()
 			if err != nil {
+				l.line += lineAdd
 				return err
 			}
+		case c == '\n':
+			lineAdd++
 		case c == '"':
 			l.postToken(tString)
+			l.line += lineAdd
 			return nil
 		}
 	}
 }
 
-func (l *lexer) readInt() error {
-	for {
-		c, err := l.read()
-		if err != nil {
-			return err
-		}
-		switch {
-		case c == '.':
-			return l.readDecimal()
-		case l.isDigit(c):
-			continue
-		default:
-			l.unread()
-			l.postToken(tInt)
-			return nil
-		}
+func (l *lexer) readNumber() error {
+	l.acceptOne("-")
+	if !l.accept(number) {
+		return fmt.Errorf("%w: no digit found", ErrInvalidNumber)
 	}
-}
-
-func (l *lexer) readDecimal() error {
-	var hasRead bool
-	for {
-		c, err := l.read()
-		if err != nil {
-			return err
-		}
-		if l.isDigit(c) {
-			hasRead = true
-			continue
-		}
-		if !hasRead {
-			return ErrNoDigitAfterDecimal
-		}
-		l.unread()
-		l.postToken(tNumber)
+	if !l.acceptOne(".") {
+		l.postToken(tInt)
 		return nil
 	}
+	if !l.accept(number) {
+		return ErrNoDigitAfterDecimal
+	}
+	l.postToken(tNumber)
+	return nil
 }
 
 func (l *lexer) readKeywords() error {
@@ -243,11 +246,19 @@ func (l *lexer) readKeywords() error {
 	case "fanout":
 		l.postToken(tFanout)
 	default:
-		if idRegex.MatchString(s) {
-			l.postToken(tIdentifier)
-			return nil
+		l.reset()
+		if !l.readIdentifier() {
+			return fmt.Errorf("%w: %s", ErrUnknownToken, s)
 		}
-		return fmt.Errorf("%w: %s", ErrUnknownToken, s)
 	}
 	return nil
+}
+
+func (l *lexer) readIdentifier() bool {
+	if !l.acceptOne(idStart) {
+		return false
+	}
+	l.accept(idRemainder)
+	l.postToken(tIdentifier)
+	return true
 }
