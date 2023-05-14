@@ -42,6 +42,7 @@ const (
 	APPEND
 	CUT
 	FANOUT
+	TAG
 )
 
 func ParseString(s string) ([]AstNode, error) {
@@ -136,6 +137,12 @@ func (p *parser) parse() ([]AstNode, error) {
 				return nil, err
 			}
 			nodes = append(nodes, fanout)
+		case tTag:
+			tag, err := p.parseTag(str)
+			if err != nil {
+				return nil, err
+			}
+			nodes = append(nodes, tag)
 		default:
 			return nil, unexpected(str.next(), "EOL", "EOF", "source", "sink", "merge", "dupe", "append", "cut", "fanout")
 		}
@@ -911,4 +918,46 @@ func (p *parser) parseFanout(str *tokenStream) (*Fanout, error) {
 		return nil, err
 	}
 	return fanout, nil
+}
+
+type Tag struct {
+	ast
+	Source string
+	Tag    string
+}
+
+func (p *parser) parseTag(str *tokenStream) (*Tag, error) {
+	t := new(Tag)
+
+	tagKw := str.next()
+	if tagKw.Type != tTag {
+		return nil, errNotAMatch
+	}
+	t.setVals(tagKw, TAG)
+
+	src := str.next()
+	if src.Type != tIdentifier {
+		return nil, unexpected(src, "source identifier")
+	}
+	t.Source = src.Text
+	t.appendSpace(src)
+
+	with := str.next()
+	if with.Type != tWith {
+		return nil, unexpected(with, "with")
+	}
+	t.appendSpace(with)
+
+	tag := str.next()
+	if tag.Type != tString {
+		return nil, unexpected(tag, "tag string")
+	}
+	t.Tag = escapeString(tag.Text)
+	t.appendSpace(tag)
+
+	_, err := p.parseRequiredEol(str)
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
 }

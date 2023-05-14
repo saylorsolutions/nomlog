@@ -75,6 +75,7 @@ func TestLexFile(t *testing.T) {
 		tAppend, tIdentifier, tTo, tIdentifier, tEol,
 		tCut, tWith, tString, tIdentifier, tSet, tLpar, tIdentifier, tEq, tInt, tComma, tIdentifier, tEq, tInt, tRpar, tEol,
 		tFanout, tIdentifier, tAs, tIdentifier, tAnd, tIdentifier, tEol,
+		tTag, tIdentifier, tWith, tString, tEol,
 		tSink, tIdentifier, tTo, tIdentifier, tDot, tIdentifier, tString, tEol,
 		tSink, tIdentifier, tAsync, tAs, tIdentifier, tTo, tIdentifier, tDot, tIdentifier, tString, tEol,
 		tEof,

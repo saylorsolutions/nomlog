@@ -38,6 +38,7 @@ const (
 	tSet
 	tWith
 	tFanout
+	tTag
 )
 
 const (
@@ -246,6 +247,8 @@ func (l *lexer) readKeywords() error {
 		l.postToken(tWith)
 	case "fanout":
 		l.postToken(tFanout)
+	case "tag":
+		l.postToken(tTag)
 	default:
 		l.reset()
 		if !l.readIdentifier() {

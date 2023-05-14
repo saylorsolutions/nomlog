@@ -5,11 +5,11 @@ This describes the grammar associated with nomlog files.
 
 ```
 EOL        := "\n"
-STRING     := """ '.*' """
+STRING     := """ '[^"]*' """
 NUMBER     := '-?\d+(\.\d+)?'
 LPAR       := "("
 RPAR       := ")"
-INT        := '\d+'
+INT        := '-?\d+'
 EQ         := "="
 COMMA      := ","
 AS         := "as"
@@ -27,6 +27,7 @@ CUT        := "cut"
 SET        := "set
 WITH       := "with"
 FANOUT     := "fanout"
+TAG        := "tag"
 CLASS      := '\w+\.\w+'
 ```
 
@@ -50,4 +51,5 @@ dupe         := DUPE IDENTIFIER AS IDENTIFIER AND IDENTIFIER eol
 append       := APPEND IDENTIFIER TO IDENTIFIER eol
 cut          := CUT (WITH STRING)? IDENTIFIER SET LPAR IDENTIFIER EQ INT ("," IDENTIFIER EQ INT)* RPAR eol
 fanout       := FANOUT IDENTIFIER AS IDENTIFIER AND IDENTIFIER eol
+tag          := TAG IDENTIFIER WITH STRING eol
 ```
