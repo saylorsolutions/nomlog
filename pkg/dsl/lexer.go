@@ -105,11 +105,12 @@ func (l *lexer) handleLexErr(err error) {
 
 func (l *lexer) isDigit(r rune) bool {
 	digits := "0123456789"
-	m := map[rune]bool{}
-	for _, r := range []rune(digits) {
-		m[r] = true
+	for _, d := range []rune(digits) {
+		if r == d {
+			return true
+		}
 	}
-	return m[r]
+	return false
 }
 
 func (l *lexer) stream() *tokenStream {
