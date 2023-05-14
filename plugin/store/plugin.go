@@ -1,18 +1,48 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/saylorsolutions/nomlog/pkg/dsl"
 	"github.com/saylorsolutions/nomlog/pkg/iterator"
 	"github.com/saylorsolutions/nomlog/plugin"
+	"strings"
 )
 
-var (
-	storeCache = map[string]*SqliteStore{}
-)
+func Plugin() plugin.Plugin {
+	return &sqlitePlugin{
+		storeCache: map[string]*SqliteStore{},
+	}
+}
 
-func Register(reg *plugin.Registration) {
+type sqlitePlugin struct {
+	storeCache map[string]*SqliteStore
+}
+
+func (p *sqlitePlugin) Closing() error {
+	closeErrors := make(chan error, len(p.storeCache))
+	for file, store := range p.storeCache {
+		if err := store.Close(); err != nil {
+			closeErrors <- fmt.Errorf("%w: file: %s", err, file)
+		}
+	}
+	close(closeErrors)
+	var buf strings.Builder
+	buf.WriteString("error closing SQLite plugin: ")
+
+	i := 0
+	for err := range closeErrors {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		buf.WriteString(err.Error())
+		i++
+	}
+	return errors.New(buf.String())
+}
+
+func (p *sqlitePlugin) Register(reg *plugin.Registration) {
 	reg.RegisterSource("sqlite", "Table", func(args ...dsl.Arg) (iterator.Iterator, error) {
 		if len(args) < 2 {
 			return nil, fmt.Errorf("%w: requires 2 argument", plugin.ErrArgs)
@@ -25,14 +55,14 @@ func Register(reg *plugin.Registration) {
 		if table == "" {
 			return nil, fmt.Errorf("%w: table name string must be specified as second argument", plugin.ErrArgs)
 		}
-		store, ok := storeCache[file]
+		store, ok := p.storeCache[file]
 		if !ok {
 			_store, err := NewStore(hclog.Default(), file)
 			if err != nil {
 				return nil, err
 			}
 			store = _store
-			storeCache[file] = _store
+			p.storeCache[file] = _store
 		}
 		return store.QueryEntries(table)
 	})
@@ -48,14 +78,14 @@ func Register(reg *plugin.Registration) {
 		if table == "" {
 			return fmt.Errorf("%w: table name string must be specified as second argument", plugin.ErrArgs)
 		}
-		store, ok := storeCache[file]
+		store, ok := p.storeCache[file]
 		if !ok {
 			_store, err := NewStore(hclog.Default(), file)
 			if err != nil {
 				return err
 			}
 			store = _store
-			storeCache[file] = _store
+			p.storeCache[file] = _store
 		}
 		return store.Sink(src, table)
 	})

@@ -20,7 +20,17 @@ const (
 	readLineField = "@read_line_number"
 )
 
-func Register(reg *plugin.Registration) {
+func Plugin() plugin.Plugin {
+	return new(filePlugin)
+}
+
+type filePlugin struct{}
+
+func (*filePlugin) Closing() error {
+	return nil
+}
+
+func (*filePlugin) Register(reg *plugin.Registration) {
 	reg.RegisterSource("file", "Tail", func(args ...dsl.Arg) (iterator.Iterator, error) {
 		if len(args) < 1 {
 			return nil, fmt.Errorf("%w: requires 1 argument", plugin.ErrArgs)

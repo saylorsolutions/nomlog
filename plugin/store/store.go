@@ -15,8 +15,9 @@ import (
 
 // SqliteStore is a store for LogEntries using Sqlite3 as a storage engine.
 type SqliteStore struct {
-	db  *sql.DB
-	log hclog.Logger
+	file string
+	db   *sql.DB
+	log  hclog.Logger
 }
 
 func NewStore(log hclog.Logger, filename string) (*SqliteStore, error) {
@@ -26,8 +27,9 @@ func NewStore(log hclog.Logger, filename string) (*SqliteStore, error) {
 	}
 	log = log.Named("sqlite-entry-store")
 	return &SqliteStore{
-		db:  db,
-		log: log,
+		file: filename,
+		db:   db,
+		log:  log,
 	}, nil
 }
 
@@ -84,7 +86,11 @@ func (s *SqliteStore) SinkCtx(ctx context.Context, iter iterator.Iterator, table
 }
 
 func (s *SqliteStore) Close() error {
-	return s.db.Close()
+	err := s.db.Close()
+	if err != nil {
+		s.log.Error("Failed to close SQLite store", "error", err, "file", s.file)
+	}
+	return err
 }
 
 func (s *SqliteStore) ensureTable(ctx context.Context, conn *sql.Conn, table string) error {

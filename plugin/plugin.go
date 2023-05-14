@@ -10,6 +10,14 @@ var (
 	ErrArgs = errors.New("argument error")
 )
 
+// Plugin represents the operations expected of a source/sink plugin.
+type Plugin interface {
+	// Register is called to allow registration of source and sink functions.
+	Register(*Registration)
+	// Closing is called after all source and sink operations, when the nomlog session is shutting down.
+	Closing() error
+}
+
 // SourceFunc is a function that takes 0 or more dsl.Arg to produce an iterator.Iterator.
 type SourceFunc = func(args ...dsl.Arg) (iterator.Iterator, error)
 
