@@ -40,6 +40,7 @@ More functionality is planned as time allows:
 * Possibly a CUI interface for SQLite files to help digest a log dump that may include multiple tables.
   * This would be really neat to do, but obviously a lot more work than just building the library.
   * I'm looking at either [tview](https://github.com/rivo/tview) or [bubbletea](https://github.com/charmbracelet/bubbletea) as a possibility.
+* Basic string argument interpolation to promote reuse and templating.
 
 # Contributing to nomlog
 I'm happy to accept contributions in terms of documentation, problem or suggestion reporting through GitHub issues, or PRs to add new features/plugins.
