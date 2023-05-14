@@ -1,8 +1,13 @@
 package plugin
 
 import (
+	"errors"
 	"github.com/saylorsolutions/nomlog/pkg/dsl"
 	"github.com/saylorsolutions/nomlog/pkg/iterator"
+)
+
+var (
+	ErrArgs = errors.New("argument error")
 )
 
 // SourceFunc is a function that takes 0 or more dsl.Arg to produce an iterator.Iterator.
