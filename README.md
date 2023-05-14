@@ -9,6 +9,7 @@ I plan to use compile time plugins to add more distinct, tech-specific functiona
 * Create log entry iterators from slices or channels.
 * Transform log entry fields in flight.
   * Uses generics to provide type safety for transforming any given type that may appear in logs.
+* Tag log entry iterators for contextual filtering.
 * Cut from log line strings to make more useful structured log entries.
   * This supports both positive and negative field indexing.
 * Join log entry messages based on regex pattern(s) that specify what the start of a log entry should look like.
