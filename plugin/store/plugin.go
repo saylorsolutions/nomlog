@@ -67,6 +67,10 @@ func (p *sqlitePlugin) Register(reg *plugin.Registration) {
 		}
 		return store.CtxQueryEntries(ctx, table)
 	})
+	reg.DocumentSource("sqlite", "Table", `sqlite.Table FILE_NAME TABLE_NAME
+
+This source will query all rows from a table and return each row as a log entry.
+It may not return continuously added rows, so it should be used for tables that represent a static snapshot of log entries.`)
 	reg.RegisterSink("sqlite", "Table", func(ctx context.Context, src iterator.Iterator, args ...dsl.Arg) error {
 		if len(args) < 2 {
 			return fmt.Errorf("%w: requires 2 argument", plugin.ErrArgs)
@@ -90,4 +94,9 @@ func (p *sqlitePlugin) Register(reg *plugin.Registration) {
 		}
 		return store.CtxSink(ctx, src, table)
 	})
+	reg.DocumentSink("sqlite", "Table", `sqlite.Table FILE_NAME TABLE_NAME
+
+This sink will land all log entries into the SQLite database table specified. The TABLE_NAME argument may be prefixed with a schema name like "my_schema.my_table".
+If the table does not exist, then it will be created with an integer primary key column called evt_id. Table columns will be created as needed, one for each log entry field.
+This means that the table may trend toward being sparsely populated if the input entries are largely heterogeneous.`)
 }

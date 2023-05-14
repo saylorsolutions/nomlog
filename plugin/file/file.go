@@ -4,14 +4,10 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/nxadm/tail"
-	"github.com/saylorsolutions/nomlog/pkg/dsl"
 	"github.com/saylorsolutions/nomlog/pkg/entries"
 	"github.com/saylorsolutions/nomlog/pkg/iterator"
-	"github.com/saylorsolutions/nomlog/plugin"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -19,45 +15,6 @@ const (
 	readTimeField = "@read_timestamp"
 	readLineField = "@read_line_number"
 )
-
-func Plugin() plugin.Plugin {
-	return new(filePlugin)
-}
-
-type filePlugin struct{}
-
-func (*filePlugin) Closing() error {
-	return nil
-}
-
-func (*filePlugin) Register(reg *plugin.Registration) {
-	reg.RegisterSource("file", "Tail", func(ctx context.Context, args ...dsl.Arg) (iterator.Iterator, error) {
-		if len(args) < 1 {
-			return nil, fmt.Errorf("%w: requires 1 argument", plugin.ErrArgs)
-		}
-		return CtxTailSource(ctx, args[0].String)
-	})
-	reg.RegisterSource("file", "File", func(ctx context.Context, args ...dsl.Arg) (iterator.Iterator, error) {
-		if len(args) < 1 {
-			return nil, fmt.Errorf("%w: requires 1 argument", plugin.ErrArgs)
-		}
-		return CtxSource(ctx, args[0].String)
-	})
-	reg.RegisterSink("file", "File", func(_ context.Context, src iterator.Iterator, args ...dsl.Arg) error {
-		if len(args) < 1 {
-			return fmt.Errorf("%w: requires 1 or 2 arguments", plugin.ErrArgs)
-		}
-
-		if len(args) >= 2 {
-			perms, err := strconv.ParseUint(args[1].String, 8, 32)
-			if err != nil {
-				return fmt.Errorf("%w: invalid file permission", plugin.ErrArgs)
-			}
-			return Sink(src, args[0].String, os.FileMode(perms))
-		}
-		return Sink(src, args[0].String, 0600)
-	})
-}
 
 // TailSource behaves the same as CtxTailSource, except that it will use context.Background as the context.
 // This means that the goroutine will be tailing the file for the entire life of the program.
