@@ -13,17 +13,19 @@ var (
 
 // Plugin represents the operations expected of a source/sink plugin.
 type Plugin interface {
+	// ID should return a unique identifier for this plugin.
+	ID() string
 	// Register is called to allow registration of source and sink functions.
 	Register(*Registration)
-	// Closing is called after all source and sink operations, when the nomlog session is shutting down.
-	Closing() error
+	// Stopping is called after all source and sink operations, when the nomlog session is shutting down.
+	Stopping() error
 }
 
 // SourceFunc is a function that takes 0 or more dsl.Arg to produce an iterator.Iterator.
-type SourceFunc = func(ctx context.Context, args ...dsl.Arg) (iterator.Iterator, error)
+type SourceFunc = func(ctx context.Context, args ...*dsl.Arg) (iterator.Iterator, error)
 
 // SinkFunc is a function that consumes an iterator.Iterator and 0 or more dsl.Arg.
-type SinkFunc = func(ctx context.Context, src iterator.Iterator, args ...dsl.Arg) error
+type SinkFunc = func(ctx context.Context, src iterator.Iterator, args ...*dsl.Arg) error
 
 // Registration is a collection of SourceFunc and SinkFunc to be used by other components.
 type Registration struct {
@@ -31,6 +33,15 @@ type Registration struct {
 	sourcesDoc map[string]map[string]string
 	sinks      map[string]map[string]SinkFunc
 	sinksDoc   map[string]map[string]string
+}
+
+func NewRegistration() *Registration {
+	return &Registration{
+		sources:    map[string]map[string]SourceFunc{},
+		sourcesDoc: map[string]map[string]string{},
+		sinks:      map[string]map[string]SinkFunc{},
+		sinksDoc:   map[string]map[string]string{},
+	}
 }
 
 func (r *Registration) RegisterSource(qualifier, class string, src SourceFunc) {

@@ -16,12 +16,16 @@ func Plugin() plugin.Plugin {
 
 type filePlugin struct{}
 
-func (*filePlugin) Closing() error {
+func (*filePlugin) ID() string {
+	return "file"
+}
+
+func (*filePlugin) Stopping() error {
 	return nil
 }
 
 func (*filePlugin) Register(reg *plugin.Registration) {
-	reg.RegisterSource("file", "Tail", func(ctx context.Context, args ...dsl.Arg) (iterator.Iterator, error) {
+	reg.RegisterSource("file", "Tail", func(ctx context.Context, args ...*dsl.Arg) (iterator.Iterator, error) {
 		if len(args) < 1 {
 			return nil, fmt.Errorf("%w: requires 1 argument", plugin.ErrArgs)
 		}
@@ -31,7 +35,7 @@ func (*filePlugin) Register(reg *plugin.Registration) {
 
 This source will watch the file specified by FILE_NAME for changes, producing a new log entry for each new line.
 Just like the file.File source, structured or unstructured data may be read.`)
-	reg.RegisterSource("file", "File", func(ctx context.Context, args ...dsl.Arg) (iterator.Iterator, error) {
+	reg.RegisterSource("file", "File", func(ctx context.Context, args ...*dsl.Arg) (iterator.Iterator, error) {
 		if len(args) < 1 {
 			return nil, fmt.Errorf("%w: requires 1 argument", plugin.ErrArgs)
 		}
@@ -42,7 +46,7 @@ Just like the file.File source, structured or unstructured data may be read.`)
 This source will read each line of the file specified by FILE_NAME, emitting a log entry for each one.
 If the line represents a valid JSON document, then it will be emitted as-is except with additional fields specifying read timing.
 Otherwise, the line is added as-is to a log entry with a field "@message" containing the original line.`)
-	reg.RegisterSink("file", "File", func(_ context.Context, src iterator.Iterator, args ...dsl.Arg) error {
+	reg.RegisterSink("file", "File", func(_ context.Context, src iterator.Iterator, args ...*dsl.Arg) error {
 		if len(args) < 1 {
 			return fmt.Errorf("%w: requires 1 or 2 arguments", plugin.ErrArgs)
 		}

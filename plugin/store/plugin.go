@@ -21,7 +21,11 @@ type sqlitePlugin struct {
 	storeCache map[string]*SqliteStore
 }
 
-func (p *sqlitePlugin) Closing() error {
+func (p *sqlitePlugin) ID() string {
+	return "sqlite"
+}
+
+func (p *sqlitePlugin) Stopping() error {
 	closeErrors := make(chan error, len(p.storeCache))
 	for file, store := range p.storeCache {
 		if err := store.Close(); err != nil {
@@ -44,7 +48,7 @@ func (p *sqlitePlugin) Closing() error {
 }
 
 func (p *sqlitePlugin) Register(reg *plugin.Registration) {
-	reg.RegisterSource("sqlite", "Table", func(ctx context.Context, args ...dsl.Arg) (iterator.Iterator, error) {
+	reg.RegisterSource("sqlite", "Table", func(ctx context.Context, args ...*dsl.Arg) (iterator.Iterator, error) {
 		if len(args) < 2 {
 			return nil, fmt.Errorf("%w: requires 2 argument", plugin.ErrArgs)
 		}
@@ -71,7 +75,7 @@ func (p *sqlitePlugin) Register(reg *plugin.Registration) {
 
 This source will query all rows from a table and return each row as a log entry.
 It may not return continuously added rows, so it should be used for tables that represent a static snapshot of log entries.`)
-	reg.RegisterSink("sqlite", "Table", func(ctx context.Context, src iterator.Iterator, args ...dsl.Arg) error {
+	reg.RegisterSink("sqlite", "Table", func(ctx context.Context, src iterator.Iterator, args ...*dsl.Arg) error {
 		if len(args) < 2 {
 			return fmt.Errorf("%w: requires 2 argument", plugin.ErrArgs)
 		}
