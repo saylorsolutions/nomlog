@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"errors"
 	"github.com/saylorsolutions/nomlog/pkg/dsl"
 	"github.com/saylorsolutions/nomlog/pkg/iterator"
@@ -19,10 +20,10 @@ type Plugin interface {
 }
 
 // SourceFunc is a function that takes 0 or more dsl.Arg to produce an iterator.Iterator.
-type SourceFunc = func(args ...dsl.Arg) (iterator.Iterator, error)
+type SourceFunc = func(ctx context.Context, args ...dsl.Arg) (iterator.Iterator, error)
 
 // SinkFunc is a function that consumes an iterator.Iterator and 0 or more dsl.Arg.
-type SinkFunc = func(src iterator.Iterator, args ...dsl.Arg) error
+type SinkFunc = func(ctx context.Context, src iterator.Iterator, args ...dsl.Arg) error
 
 // Registration is a collection of SourceFunc and SinkFunc to be used by other components.
 type Registration struct {

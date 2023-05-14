@@ -31,19 +31,19 @@ func (*filePlugin) Closing() error {
 }
 
 func (*filePlugin) Register(reg *plugin.Registration) {
-	reg.RegisterSource("file", "Tail", func(args ...dsl.Arg) (iterator.Iterator, error) {
+	reg.RegisterSource("file", "Tail", func(ctx context.Context, args ...dsl.Arg) (iterator.Iterator, error) {
 		if len(args) < 1 {
 			return nil, fmt.Errorf("%w: requires 1 argument", plugin.ErrArgs)
 		}
-		return TailSource(args[0].String)
+		return CtxTailSource(ctx, args[0].String)
 	})
-	reg.RegisterSource("file", "File", func(args ...dsl.Arg) (iterator.Iterator, error) {
+	reg.RegisterSource("file", "File", func(ctx context.Context, args ...dsl.Arg) (iterator.Iterator, error) {
 		if len(args) < 1 {
 			return nil, fmt.Errorf("%w: requires 1 argument", plugin.ErrArgs)
 		}
-		return Source(args[0].String)
+		return CtxSource(ctx, args[0].String)
 	})
-	reg.RegisterSink("file", "File", func(src iterator.Iterator, args ...dsl.Arg) error {
+	reg.RegisterSink("file", "File", func(_ context.Context, src iterator.Iterator, args ...dsl.Arg) error {
 		if len(args) < 1 {
 			return fmt.Errorf("%w: requires 1 or 2 arguments", plugin.ErrArgs)
 		}

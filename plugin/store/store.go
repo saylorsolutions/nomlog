@@ -34,10 +34,14 @@ func NewStore(log hclog.Logger, filename string) (*SqliteStore, error) {
 }
 
 func (s *SqliteStore) QueryEntries(table string) (iterator.Iterator, error) {
+	return s.CtxQueryEntries(context.Background(), table)
+}
+
+func (s *SqliteStore) CtxQueryEntries(ctx context.Context, table string) (iterator.Iterator, error) {
 	if !tablePattern.MatchString(table) {
 		return nil, fmt.Errorf("%w: %s", ErrBadTable, table)
 	}
-	rows, err := s.db.Query("select * from " + table)
+	rows, err := s.db.QueryContext(ctx, "select * from "+table)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +49,7 @@ func (s *SqliteStore) QueryEntries(table string) (iterator.Iterator, error) {
 }
 
 func (s *SqliteStore) Sink(iter iterator.Iterator, table string) error {
-	return s.SinkCtx(context.Background(), iter, table)
+	return s.CtxSink(context.Background(), iter, table)
 }
 
 var (
@@ -53,7 +57,7 @@ var (
 	ErrBadTable  = errors.New("invalid table name")
 )
 
-func (s *SqliteStore) SinkCtx(ctx context.Context, iter iterator.Iterator, table string) error {
+func (s *SqliteStore) CtxSink(ctx context.Context, iter iterator.Iterator, table string) error {
 	if !tablePattern.MatchString(table) {
 		return fmt.Errorf("%w: %s", ErrBadTable, table)
 	}

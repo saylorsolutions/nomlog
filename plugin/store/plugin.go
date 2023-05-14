@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
@@ -43,7 +44,7 @@ func (p *sqlitePlugin) Closing() error {
 }
 
 func (p *sqlitePlugin) Register(reg *plugin.Registration) {
-	reg.RegisterSource("sqlite", "Table", func(args ...dsl.Arg) (iterator.Iterator, error) {
+	reg.RegisterSource("sqlite", "Table", func(ctx context.Context, args ...dsl.Arg) (iterator.Iterator, error) {
 		if len(args) < 2 {
 			return nil, fmt.Errorf("%w: requires 2 argument", plugin.ErrArgs)
 		}
@@ -64,9 +65,9 @@ func (p *sqlitePlugin) Register(reg *plugin.Registration) {
 			store = _store
 			p.storeCache[file] = _store
 		}
-		return store.QueryEntries(table)
+		return store.CtxQueryEntries(ctx, table)
 	})
-	reg.RegisterSink("sqlite", "Table", func(src iterator.Iterator, args ...dsl.Arg) error {
+	reg.RegisterSink("sqlite", "Table", func(ctx context.Context, src iterator.Iterator, args ...dsl.Arg) error {
 		if len(args) < 2 {
 			return fmt.Errorf("%w: requires 2 argument", plugin.ErrArgs)
 		}
@@ -87,6 +88,6 @@ func (p *sqlitePlugin) Register(reg *plugin.Registration) {
 			store = _store
 			p.storeCache[file] = _store
 		}
-		return store.Sink(src, table)
+		return store.CtxSink(ctx, src, table)
 	})
 }
