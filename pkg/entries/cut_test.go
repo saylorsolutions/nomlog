@@ -10,7 +10,7 @@ func TestCut(t *testing.T) {
 		StandardMessageField: "a b c",
 	}
 	entry, err := Cut(entry,
-		CutDelim(' '),
+		CutDelim(" "),
 		CutField(StandardMessageField),
 		CutCollector(
 			NewCutCollectSpec().
@@ -61,7 +61,7 @@ func TestCut_WithRemainder(t *testing.T) {
 		StandardMessageField: "a b c d e",
 	}
 	entry, err := Cut(entry,
-		CutDelim(' '),
+		CutDelim(" "),
 		CutField(StandardMessageField),
 		CutCollector(
 			NewCutCollectSpec().
@@ -92,7 +92,7 @@ func TestCut_WithNegativeIndex(t *testing.T) {
 		StandardMessageField: "a b c d e",
 	}
 	entry, err := Cut(entry,
-		CutDelim(' '),
+		CutDelim(" "),
 		CutField(StandardMessageField),
 		CutCollector(
 			NewCutCollectSpec().
