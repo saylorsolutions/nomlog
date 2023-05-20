@@ -1,10 +1,10 @@
-source as a file.Source "file.log"
-    source as b file.Source  "file2.log"
+source as a file.File "file.log"
+    source as b file.File  "file2.log"
 merge a and b    as c
 dupe    c as  e and f
 append e to f
 cut with " " f set(field1 = 0, field2 = -1)
 fanout f as g and h
-tag f with "important"
-sink g to file.Sink "file3.log"
-sink h async as i to    file.Sink "file4.log"
+tag g with "important"
+sink g to file.File "file3.log"
+sink h async as i to    file.File "file4.log"

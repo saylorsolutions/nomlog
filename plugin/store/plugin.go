@@ -33,18 +33,23 @@ func (p *sqlitePlugin) Stopping() error {
 		}
 	}
 	close(closeErrors)
-	var buf strings.Builder
-	buf.WriteString("error closing SQLite plugin: ")
 
+	var buf strings.Builder
 	i := 0
 	for err := range closeErrors {
+		if i == 0 {
+			buf.WriteString("error closing SQLite plugin: ")
+		}
 		if i > 0 {
 			buf.WriteString(", ")
 		}
 		buf.WriteString(err.Error())
 		i++
 	}
-	return errors.New(buf.String())
+	if buf.Len() > 0 {
+		return errors.New(buf.String())
+	}
+	return nil
 }
 
 func (p *sqlitePlugin) Register(reg *plugin.Registration) {
