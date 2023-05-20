@@ -10,6 +10,7 @@ import (
 	"github.com/saylorsolutions/nomlog/pkg/entries"
 	"github.com/saylorsolutions/nomlog/pkg/iterator"
 	"github.com/saylorsolutions/nomlog/plugin"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -56,6 +57,7 @@ type Runtime struct {
 	sourceIDs map[string]int
 	wg        sync.WaitGroup
 	state     runtimeState
+	dryRun    bool
 }
 
 func NewRuntime(log hclog.Logger, plugins ...plugin.Plugin) *Runtime {
@@ -67,13 +69,18 @@ func NewRuntime(log hclog.Logger, plugins ...plugin.Plugin) *Runtime {
 	}
 }
 
+func (r *Runtime) assertState(expected runtimeState, operation string) error {
+	if r.state != expected {
+		return fmt.Errorf("%w: current state is '%s', expected '%s' for operation '%s'", ErrInvalidState, stateStrings[r.state], stateStrings[expected], operation)
+	}
+	return nil
+}
+
 func (r *Runtime) Start(_ctx context.Context) error {
 	start := time.Now()
 	log := r.log
 	log.Debug("Starting runtime")
-	if r.state != created {
-		err := fmt.Errorf("%w: invalid state for start operation: %s", ErrInvalidState, stateStrings[r.state])
-		log.Error("Invalid state to start", "error", err)
+	if err := r.assertState(created, "start"); err != nil {
 		return err
 	}
 	log.Debug("Registering plugins")
@@ -96,9 +103,7 @@ func (r *Runtime) Stop() (rerr error) {
 	start := time.Now()
 	log := r.log.With("stopping", start)
 	log.Debug("Stopping runtime")
-	if r.state != started {
-		err := fmt.Errorf("%w: invalid state for stop operation: %s", ErrInvalidState, stateStrings[r.state])
-		log.Error("Invalid state to stop runtime", "error", err)
+	if err := r.assertState(started, "stop"); err != nil {
 		return err
 	}
 	r.state = stopping
@@ -135,6 +140,9 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 	if len(asts) == 0 {
 		return nil
 	}
+	if err := r.assertState(started, "execute"); err != nil {
+		return err
+	}
 
 	start := time.Now()
 	log := r.log.With("exec-start", start)
@@ -159,6 +167,11 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 				log.Error("Source class not found", "error", err)
 				return err
 			}
+			if r.dryRun {
+				log.Info("Dry run source", "class", ast.Class.Text(), "args", r.argString(ast.Args))
+				r.addSource(ast.ID, nil)
+				continue
+			}
 			log.Debug("Executing source AST")
 			iter, err := src(r.ctx, ast.Args...)
 			if err != nil {
@@ -171,7 +184,7 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 				log.Error("Invalid source ID", "error", err)
 				return err
 			}
-			si, _ := r.sourceIDs[ast.Source]
+			r.markConsumed(ast.Source)
 
 			sink, _, ok := r.registry.Sink(ast.Class.Qualifier, ast.Class.SinkClass)
 			if !ok {
@@ -179,8 +192,12 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 				log.Error("Unknown sink", "error", err)
 				return err
 			}
+			if r.dryRun {
+				log.Info("Dry run sink", "class", ast.Class.Text(), "args", r.argString(ast.Args))
+				continue
+			}
 			fn := func() error {
-				if err := sink(r.ctx, r.sources[si], ast.Args...); err != nil {
+				if err := sink(r.ctx, r.getSource(ast.Source), ast.Args...); err != nil {
 					log.Error("Failed to execute sink", "error", err)
 					return err
 				}
@@ -212,7 +229,12 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 			r.markConsumed(ast.SourceA, ast.SourceB)
 			a := r.getSource(ast.SourceA)
 			b := r.getSource(ast.SourceB)
-			merged := iterator.Merge(a, b)
+			var merged iterator.Iterator
+			if r.dryRun {
+				log.Info("Dry run merge", "source-a", ast.SourceA, "source-b", ast.SourceB, "output", ast.ID)
+			} else {
+				merged = iterator.Merge(a, b)
+			}
 			r.addSource(ast.ID, merged)
 		case *dsl.Dupe:
 			if err := r.validateExistingSourceID(ast.Source); err != nil {
@@ -229,7 +251,14 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 			}
 			src := r.getSource(ast.Source)
 			r.markConsumed(ast.Source)
-			a, b := iterator.Dupe(src)
+			var (
+				a, b iterator.Iterator
+			)
+			if r.dryRun {
+				log.Info("Dry run dupe", "source", ast.Source, "output-a", ast.TargetA, "output-b", ast.TargetB)
+			} else {
+				a, b = iterator.Dupe(src)
+			}
 			r.addSource(ast.TargetA, a)
 			r.addSource(ast.TargetB, b)
 		case *dsl.Append:
@@ -243,6 +272,10 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 			}
 			r.markConsumed(ast.Source)
 			s, t := r.getSource(ast.Source), r.getSource(ast.Target)
+			if r.dryRun {
+				log.Info("Dry run append", "source", ast.Source, "target", ast.Target)
+				continue
+			}
 			appended := iterator.Concat(t, s)
 			r.replaceSource(ast.Target, appended)
 		case *dsl.Cut:
@@ -251,10 +284,15 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 				return err
 			}
 			src := r.getSource(ast.Source)
+			if r.dryRun {
+				log.Info("Dry run cut", "source", ast.Source, "mappings", ast.FieldSets, "delimiter", ast.Delimiter)
+				continue
+			}
 			spec := entries.NewCutCollectSpec()
 			for f, i := range ast.FieldSets {
 				spec.Map(f, i)
 			}
+
 			cut := iterator.Cutter(src,
 				entries.CutDelim(ast.Delimiter),
 				entries.CutCollector(spec.Collector()),
@@ -275,7 +313,14 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 			}
 			src := r.getSource(ast.Source)
 			r.markConsumed(ast.Source)
-			a, b := iterator.Fanout(src)
+			var (
+				a, b iterator.Iterator
+			)
+			if r.dryRun {
+				log.Info("Dry run fanout", "source", ast.Source, "output-a", ast.TargetA, "output-b", ast.TargetB)
+			} else {
+				a, b = iterator.Fanout(src)
+			}
 			r.addSource(ast.TargetA, a)
 			r.addSource(ast.TargetB, b)
 		case *dsl.Tag:
@@ -284,6 +329,9 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 				return err
 			}
 			src := r.getSource(ast.Source)
+			if r.dryRun {
+				log.Info("Dry run tag", "source", ast.Source, "tag", ast.Tag)
+			}
 			src = iterator.Tag(src, ast.Tag)
 			r.replaceSource(ast.Source, src)
 		case *dsl.Eol:
@@ -294,6 +342,29 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 		}
 	}
 	return nil
+}
+
+func (r *Runtime) argString(args []*dsl.Arg) string {
+	var buf strings.Builder
+
+	for i, arg := range args {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		switch {
+		case len(arg.String) > 0:
+			buf.WriteString(arg.String)
+		case len(arg.Identifier) > 0:
+			buf.WriteString(arg.Identifier)
+		case arg.Int != 0:
+			buf.WriteString(strconv.FormatInt(arg.Int, 10))
+		case arg.Number != 0:
+			buf.WriteString(strconv.FormatFloat(arg.Number, 'f', 2, 64))
+		default:
+			buf.WriteString(arg.Text())
+		}
+	}
+	return buf.String()
 }
 
 func (r *Runtime) validateNewSourceID(id string) error {
@@ -342,6 +413,14 @@ func (r *Runtime) markConsumed(ids ...string) {
 		i := r.sourceIDs[id]
 		r.consumed[i] = true
 	}
+}
+
+func (r *Runtime) DryRun(ast ...dsl.AstNode) error {
+	r.dryRun = true
+	defer func() {
+		r.dryRun = false
+	}()
+	return r.Execute(ast...)
 }
 
 func emptyID(id string) bool {
