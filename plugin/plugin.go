@@ -3,8 +3,11 @@ package plugin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/saylorsolutions/nomlog/pkg/dsl"
 	"github.com/saylorsolutions/nomlog/pkg/iterator"
+	"sort"
+	"strings"
 )
 
 var (
@@ -74,13 +77,14 @@ func (r *Registration) Source(qualifier, class string) (SourceFunc, string, bool
 	if !ok {
 		return nil, "", false
 	}
+	defaultDoc := fmt.Sprintf("%s.%s", qualifier, class)
 	sourceDoc, ok := r.sourcesDoc[qualifier]
 	if !ok {
-		return source, "", true
+		return source, defaultDoc, true
 	}
 	doc, ok := sourceDoc[class]
 	if !ok {
-		return source, "", true
+		return source, defaultDoc, true
 	}
 	return source, doc, true
 }
@@ -115,13 +119,78 @@ func (r *Registration) Sink(qualifier, class string) (SinkFunc, string, bool) {
 	if !ok {
 		return nil, "", false
 	}
+	defaultDoc := fmt.Sprintf("%s.%s", qualifier, class)
 	sinksDoc, ok := r.sinksDoc[qualifier]
 	if !ok {
-		return sink, "", true
+		return sink, defaultDoc, true
 	}
 	doc, ok := sinksDoc[class]
 	if !ok {
-		return sink, "", true
+		return sink, defaultDoc, true
 	}
 	return sink, doc, true
+}
+
+func (r *Registration) AllDocs() string {
+	var buf strings.Builder
+	buf.WriteString("Sources:\n")
+	populateDocs(&buf, r.sources, r.sourcesDoc)
+	buf.WriteString("Sinks:\n")
+	populateDocs(&buf, r.sinks, r.sinksDoc)
+	return buf.String()
+}
+
+func getDocs(docs map[string]map[string]string, qualifier, class string) string {
+	defaultDoc := fmt.Sprintf("%s.%s", qualifier, class)
+	qualDocs, ok := docs[qualifier]
+	if !ok {
+		return defaultDoc
+	}
+	doc, ok := qualDocs[class]
+	if !ok {
+		return defaultDoc
+	}
+	return doc
+}
+
+const (
+	indent = "  "
+)
+
+func indentString(s string) string {
+	s = strings.TrimSuffix(strings.ReplaceAll(indent+s, "\n", "\n"+indent), indent)
+	return strings.ReplaceAll(s, "\n"+indent+"\n", "\n\n")
+}
+
+func populateDocs[T any](buf *strings.Builder, model map[string]map[string]T, docs map[string]map[string]string) {
+	var (
+		_buf       strings.Builder
+		qualifiers []string
+		qualMap    = map[string][]string{}
+	)
+	for qual, classMap := range model {
+		qualifiers = append(qualifiers, qual)
+		var classes []string
+		for class := range classMap {
+			classes = append(classes, class)
+		}
+		sort.Strings(classes)
+		qualMap[qual] = classes
+	}
+	if len(qualifiers) == 0 {
+		_buf.WriteString("None\n")
+	} else {
+		sort.Strings(qualifiers)
+		for _, qual := range qualifiers {
+			for _, class := range qualMap[qual] {
+				doc := getDocs(docs, qual, class)
+				if !strings.HasSuffix(doc, "\n") {
+					doc += "\n"
+				}
+				_buf.WriteString(doc)
+				_buf.WriteString("\n")
+			}
+		}
+	}
+	buf.WriteString(indentString(_buf.String()))
 }
