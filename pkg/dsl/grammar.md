@@ -29,6 +29,7 @@ WITH       := "with"
 FANOUT     := "fanout"
 TAG        := "tag"
 CLASS      := '\w+\.\w+'
+JOIN       := "join"
 ```
 
 ## Productions
@@ -38,18 +39,20 @@ There are some dynamically defined literals used in these productions.
 * **arg:** A dynamically defined value that is specific to the `source_class` or `sink_class` that precedes it.
 
 ```
-eol          := (EOL|EOF)
-arg          := (STRING|NUMBER|INT|IDENTIFIER)
-args         := arg (COMMA arg)*
-source_class := IDENTIFIER DOT IDENTIFIER
-source       := SOURCE AS IDENTIFIER source_class args eol
-sink_class   := IDENTIFIER DOT IDENTIFIER
-sink         := SINK IDENTIFIER TO sink_class args eol
-async_sink   := SINK IDENTIFIER ASYNC AS IDENTIFIER TO sink_class args eol
-merge        := MERGE IDENTIFIER AND IDENTIFIER AS IDENTIFIER eol
-dupe         := DUPE IDENTIFIER AS IDENTIFIER AND IDENTIFIER eol
-append       := APPEND IDENTIFIER TO IDENTIFIER eol
-cut          := CUT (WITH STRING)? IDENTIFIER SET LPAR IDENTIFIER EQ INT ("," IDENTIFIER EQ INT)* RPAR eol
-fanout       := FANOUT IDENTIFIER AS IDENTIFIER AND IDENTIFIER eol
-tag          := TAG IDENTIFIER WITH STRING eol
+eol           := (EOL|EOF)
+arg           := (STRING|NUMBER|INT|IDENTIFIER)
+args          := arg (COMMA arg)*
+source_class  := IDENTIFIER DOT IDENTIFIER
+source        := SOURCE AS IDENTIFIER source_class args eol
+sink_class    := IDENTIFIER DOT IDENTIFIER
+sink          := SINK IDENTIFIER TO sink_class args eol
+async_sink    := SINK IDENTIFIER ASYNC AS IDENTIFIER TO sink_class args eol
+merge         := MERGE IDENTIFIER AND IDENTIFIER AS IDENTIFIER eol
+dupe          := DUPE IDENTIFIER AS IDENTIFIER AND IDENTIFIER eol
+append        := APPEND IDENTIFIER TO IDENTIFIER eol
+cut           := CUT (WITH STRING)? IDENTIFIER SET LPAR IDENTIFIER EQ INT ("," IDENTIFIER EQ INT)* RPAR eol
+fanout        := FANOUT IDENTIFIER AS IDENTIFIER AND IDENTIFIER eol
+tag           := TAG IDENTIFIER WITH STRING eol
+join_patterns := STRING (COMMA STRING)*
+join          := JOIN IDENTIFIER WITH join_patterns eol
 ```

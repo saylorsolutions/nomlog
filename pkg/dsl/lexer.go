@@ -39,6 +39,7 @@ const (
 	tWith
 	tFanout
 	tTag
+	tJoin
 )
 
 const (
@@ -249,6 +250,8 @@ func (l *lexer) readKeywords() error {
 		l.postToken(tFanout)
 	case "tag":
 		l.postToken(tTag)
+	case "join":
+		l.postToken(tJoin)
 	default:
 		l.reset()
 		if !l.readIdentifier() {

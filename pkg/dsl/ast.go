@@ -3,6 +3,7 @@ package dsl
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -12,6 +13,7 @@ var (
 	ErrUndefinedIdentifier = errors.New("undefined identifier")
 	ErrAlreadyDefined      = errors.New("identifier is already defined")
 	ErrAlreadyConsumed     = errors.New("iterator is no longer consumable")
+	ErrInvalidJoinPattern  = errors.New("invalid join pattern")
 	errNotAMatch           = errors.New("not a match")
 )
 
@@ -43,6 +45,7 @@ const (
 	CUT
 	FANOUT
 	TAG
+	JOIN
 )
 
 func ParseString(s string) ([]AstNode, error) {
@@ -143,6 +146,12 @@ func (p *parser) parse() ([]AstNode, error) {
 				return nil, err
 			}
 			nodes = append(nodes, tag)
+		case tJoin:
+			join, err := p.parseJoin(str)
+			if err != nil {
+				return nil, err
+			}
+			nodes = append(nodes, join)
 		default:
 			return nil, unexpected(str.next(), "EOL", "EOF", "source", "sink", "merge", "dupe", "append", "cut", "fanout")
 		}
@@ -960,4 +969,74 @@ func (p *parser) parseTag(str *tokenStream) (*Tag, error) {
 		return nil, err
 	}
 	return t, nil
+}
+
+type Join struct {
+	ast
+	Source   string
+	Patterns []string
+}
+
+func (p *parser) parseJoin(str *tokenStream) (*Join, error) {
+	j := new(Join)
+
+	joinKw := str.next()
+	if joinKw.Type != tJoin {
+		return nil, errNotAMatch
+	}
+	j.setVals(joinKw, JOIN)
+
+	src := str.next()
+	if src.Type != tIdentifier {
+		return nil, unexpected(src, "source identifier")
+	}
+	j.Source = src.Text
+	j.appendSpace(src)
+
+	with := str.next()
+	if with.Type != tWith {
+		return nil, unexpected(with, "with")
+	}
+	j.appendSpace(with)
+
+	patterns, err := p.parseJoinPatterns(str)
+	if err != nil {
+		return nil, err
+	}
+	j.appendTextSpace(strings.Join(patterns, ", "))
+
+	j.Patterns = make([]string, len(patterns))
+	for i, pattern := range patterns {
+		j.Patterns[i] = escapeString(pattern)
+	}
+
+	_, err = p.parseRequiredEol(str)
+	if err != nil {
+		return nil, err
+	}
+	return j, nil
+}
+
+func (p *parser) parseJoinPatterns(str *tokenStream) ([]string, error) {
+	var patterns []string
+
+	for {
+		if len(patterns) > 0 {
+			t := str.next()
+			if t.Type != tComma {
+				str.pushBack(t)
+				return patterns, nil
+			}
+		}
+		pattern := str.next()
+		if pattern.Type != tString {
+			return nil, unexpected(pattern, "join pattern string")
+		}
+		_, err := regexp.Compile(escapeString(pattern.Text))
+		if err != nil {
+			return nil, semantic(pattern, fmt.Errorf("%w: unable to parse pattern %s", ErrInvalidJoinPattern, pattern.Text))
+		}
+
+		patterns = append(patterns, pattern.Text)
+	}
 }

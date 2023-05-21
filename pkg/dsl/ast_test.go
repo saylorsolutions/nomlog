@@ -37,7 +37,7 @@ func TestEscapeString(t *testing.T) {
 func TestParseString(t *testing.T) {
 	nodes, err := ParseString(string(script))
 	assert.NoError(t, err)
-	expectedTypes := []AstType{SOURCE, SOURCE, MERGE, DUPE, APPEND, CUT, FANOUT, TAG, SINK, ASYNC_SINK}
+	expectedTypes := []AstType{SOURCE, SOURCE, MERGE, DUPE, APPEND, CUT, FANOUT, TAG, JOIN, SINK, ASYNC_SINK}
 	assert.Len(t, nodes, len(expectedTypes))
 
 	for i := 0; i < len(expectedTypes); i++ {
