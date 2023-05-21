@@ -948,6 +948,12 @@ func (p *parser) parseTag(str *tokenStream) (*Tag, error) {
 	if src.Type != tIdentifier {
 		return nil, unexpected(src, "source identifier")
 	}
+	if !p.sources[src.Text] {
+		return nil, semantic(src, ErrUndefinedIdentifier)
+	}
+	if p.consumed[src.Text] {
+		return nil, semantic(src, ErrAlreadyConsumed)
+	}
 	t.Source = src.Text
 	t.appendSpace(src)
 
@@ -989,6 +995,12 @@ func (p *parser) parseJoin(str *tokenStream) (*Join, error) {
 	src := str.next()
 	if src.Type != tIdentifier {
 		return nil, unexpected(src, "source identifier")
+	}
+	if !p.sources[src.Text] {
+		return nil, semantic(src, ErrUndefinedIdentifier)
+	}
+	if p.consumed[src.Text] {
+		return nil, semantic(src, ErrAlreadyConsumed)
 	}
 	j.Source = src.Text
 	j.appendSpace(src)
