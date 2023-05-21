@@ -331,11 +331,23 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 				log.Error("Invalid source", "error", err)
 				return err
 			}
-			src := r.getSource(ast.Source)
 			if r.dryRun {
 				log.Info("Dry run tag", "source", ast.Source, "tag", ast.Tag)
 			}
+			src := r.getSource(ast.Source)
 			src = iterator.Tag(src, ast.Tag)
+			r.replaceSource(ast.Source, src)
+		case *dsl.Join:
+			if err := r.validateExistingSourceID(ast.Source); err != nil {
+				log.Error("Invalid source", "error", err)
+				return err
+			}
+			if r.dryRun {
+				log.Info("Dry run join", "source", ast.Source, "patterns", ast.Patterns)
+				continue
+			}
+			src := r.getSource(ast.Source)
+			src = iterator.Joiner(src, ast.Patterns...)
 			r.replaceSource(ast.Source, src)
 		case *dsl.Eol:
 		default:

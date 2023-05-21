@@ -40,8 +40,8 @@ fanout src as a and b
 merge a and b as src2
 dupe src2 as c and d
 merge d and c as src3
-sink src3 to file.File "` + output + `"
-`)
+join src3 with "^leading text", "^other pattern"
+sink src3 to file.File "` + output + `"`)
 	assert.NoError(t, err)
 
 	data, err := os.ReadFile(output)
@@ -74,6 +74,7 @@ func TestStructured(t *testing.T) {
 	err = r.ExecuteString(`
 source as src file.File "data.json"
 tag src with "structured"
+join src with "^leading text"
 sink src to file.File "` + output + `"
 `)
 	assert.NoError(t, err)
