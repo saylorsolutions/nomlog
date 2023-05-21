@@ -206,7 +206,10 @@ func (r *Runtime) Execute(asts ...dsl.AstNode) error {
 			if ast.Async {
 				r.wg.Add(1)
 				go func() {
-					_ = fn()
+					defer r.wg.Done()
+					if err := fn(); err != nil {
+						r.log.Error("Error running async sink operation", "sink", ast.Class.Text(), "args", r.argString(ast.Args), "error", err)
+					}
 				}()
 				continue
 			}
