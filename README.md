@@ -27,6 +27,26 @@ I plan to use compile time plugins to add more distinct, tech-specific functiona
   * Launch a nomlog session from a file with `nomlog exec someFile`.
   * Check that your scripts are valid with `nomlog vet someFile`.
 
+## Installing the CLI
+
+Make sure you have Go tools installed with this command. The output version must be at or greater than the one listed in [go.mod](go.mod).
+
+```
+go version
+```
+
+Then run this command to install it on your system.
+
+```
+go install github.com/saylorsolutions/nomlog/cmd/nomlog@main
+```
+
+If you can't execute the command as `nomlog`, make sure that your go installation is set up properly with the `~/go/bin` or `%USERPROFILE%\go\bin` directory (depending on your OS) on your path.
+
+### Uninstalling the CLI
+
+To uninstall the CLI, just delete it from `~/go/bin` or `%USERPROFILE%\go\bin`, whichever the case may be for your OS.
+
 # Contributing to nomlog
 
 I'm happy to accept contributions in terms of documentation, problem or suggestion reporting through GitHub issues, or PRs to add new features/plugins.
