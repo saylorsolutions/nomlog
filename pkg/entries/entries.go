@@ -5,15 +5,17 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
 const (
-	StandardMessageField   = "@message"
-	StandardTimestampField = "@timestamp"
-	StandardLevelField     = "@level"
-	StandardModuleField    = "@module"
-	StandardCallerField    = "@caller"
+	StandardMessageField   = "@message"   // StandardMessageField is an unstructured logging payload
+	StandardTimestampField = "@timestamp" // StandardTimestampField represents the date and time that the LogEntry was emitted
+	StandardLevelField     = "@level"     // StandardLevelField specifies the logging level used
+	StandardModuleField    = "@module"    // StandardModuleField references a source system specific component hierarchy
+	StandardCallerField    = "@caller"    // StandardCallerField specifies the caller of the routine emitting this log entry
+	StandardTagField       = "@tag"       // StandardTagField contains classifiers for a LogEntry that may be unrelated to the payload, but relate to the context in which it was emitted
 )
 
 // LogEntry is a single entry in a log, with potentially many fields.
@@ -22,6 +24,33 @@ type LogEntry map[string]any
 func (e LogEntry) HasField(name string) bool {
 	_, ok := e[name]
 	return ok
+}
+
+// Tag sets a tag on this LogEntry. A Tag is intended to classify the LogEntry in some way, presumably for filtering later.
+// If a tag has already been set, then the parameter will be appended with a period separator.
+func (e LogEntry) Tag(tag string) {
+	_tag, ok := e.AsString(StandardTagField)
+	if !ok {
+		e[StandardTagField] = tag
+		return
+	}
+	e[StandardTagField] = fmt.Sprintf("%s.%s", _tag, tag)
+}
+
+// HasTag determines if this LogEntry has a tag matching the parameter.
+// Values will be compared ignoring case.
+func (e LogEntry) HasTag(tag string) bool {
+	_tag, ok := e.AsString(StandardTagField)
+	if !ok {
+		return false
+	}
+	tags := strings.Split(_tag, ".")
+	for _, t := range tags {
+		if strings.ToLower(t) == strings.ToLower(tag) {
+			return true
+		}
+	}
+	return false
 }
 
 func (e LogEntry) AsFloat(name string) (float64, bool) {

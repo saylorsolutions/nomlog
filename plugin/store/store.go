@@ -15,8 +15,9 @@ import (
 
 // SqliteStore is a store for LogEntries using Sqlite3 as a storage engine.
 type SqliteStore struct {
-	db  *sql.DB
-	log hclog.Logger
+	file string
+	db   *sql.DB
+	log  hclog.Logger
 }
 
 func NewStore(log hclog.Logger, filename string) (*SqliteStore, error) {
@@ -26,16 +27,21 @@ func NewStore(log hclog.Logger, filename string) (*SqliteStore, error) {
 	}
 	log = log.Named("sqlite-entry-store")
 	return &SqliteStore{
-		db:  db,
-		log: log,
+		file: filename,
+		db:   db,
+		log:  log,
 	}, nil
 }
 
 func (s *SqliteStore) QueryEntries(table string) (iterator.Iterator, error) {
+	return s.CtxQueryEntries(context.Background(), table)
+}
+
+func (s *SqliteStore) CtxQueryEntries(ctx context.Context, table string) (iterator.Iterator, error) {
 	if !tablePattern.MatchString(table) {
 		return nil, fmt.Errorf("%w: %s", ErrBadTable, table)
 	}
-	rows, err := s.db.Query("select * from " + table)
+	rows, err := s.db.QueryContext(ctx, "select * from "+table)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +49,7 @@ func (s *SqliteStore) QueryEntries(table string) (iterator.Iterator, error) {
 }
 
 func (s *SqliteStore) Sink(iter iterator.Iterator, table string) error {
-	return s.SinkCtx(context.Background(), iter, table)
+	return s.CtxSink(context.Background(), iter, table)
 }
 
 var (
@@ -51,7 +57,7 @@ var (
 	ErrBadTable  = errors.New("invalid table name")
 )
 
-func (s *SqliteStore) SinkCtx(ctx context.Context, iter iterator.Iterator, table string) error {
+func (s *SqliteStore) CtxSink(ctx context.Context, iter iterator.Iterator, table string) error {
 	if !tablePattern.MatchString(table) {
 		return fmt.Errorf("%w: %s", ErrBadTable, table)
 	}
@@ -84,7 +90,11 @@ func (s *SqliteStore) SinkCtx(ctx context.Context, iter iterator.Iterator, table
 }
 
 func (s *SqliteStore) Close() error {
-	return s.db.Close()
+	err := s.db.Close()
+	if err != nil {
+		s.log.Error("Failed to close SQLite store", "error", err, "file", s.file)
+	}
+	return err
 }
 
 func (s *SqliteStore) ensureTable(ctx context.Context, conn *sql.Conn, table string) error {

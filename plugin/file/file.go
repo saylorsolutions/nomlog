@@ -132,8 +132,10 @@ func Sink(iter iterator.Iterator, filename string, perms os.FileMode) error {
 			// Shouldn't ever happen, given the data type.
 			return err
 		}
-		_, err = f.Write(data)
-		if err != nil {
+		if _, err = f.Write(data); err != nil {
+			return err
+		}
+		if _, err := f.WriteString("\n"); err != nil {
 			return err
 		}
 		return nil

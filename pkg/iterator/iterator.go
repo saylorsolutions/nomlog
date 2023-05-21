@@ -50,6 +50,11 @@ func (f Func) Iterate(iter func(entry entries.LogEntry, i int) error) error {
 	}
 }
 
+// Err makes it easier to return the standard response for Iterator.Next errors.
+func Err(err error) (entries.LogEntry, int, error) {
+	return nil, -1, err
+}
+
 func FromSlice(slice []entries.LogEntry) Iterator {
 	cur := 0
 	return Func(func() (entries.LogEntry, int, error) {

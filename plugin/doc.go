@@ -8,7 +8,12 @@
 // "Sink" functions should take an iterator.Iterator - and optionally other parameters - and operate synchronously (the user may decide to call a Sink function in a goroutine).
 // Sink functions should use iterator.Drain on an iterator if they encounter an error to prevent upstream blocking.
 //
+// A plugin is anything that implements the Plugin interface. A Plugin is expected to register its source and sink functions when its Plugin.Register method is called, and may perform cleanup operations in Plugin.Stopping.
+// Arbitrary logic may be added around these events as needed. If Plugin.Register is not called, then neither will Plugin.Closing.
+//
 //	Current Plugins:
 //	- file provides source and sink for files, including tail support.
 //	- store provides SQLite source and sink.
+//
+// More will be added as time allows.
 package plugin

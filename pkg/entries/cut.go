@@ -12,7 +12,7 @@ var (
 
 type cutOpts struct {
 	field        string
-	delimiter    rune
+	delimiter    string
 	collector    func(entry LogEntry, fields []string) (collected LogEntry, remaining string)
 	removeSource bool
 }
@@ -28,7 +28,7 @@ func CutField(field string) CutOpt {
 }
 
 // CutDelim specifies the delimiter to use to split the field in Cut.
-func CutDelim(delim rune) CutOpt {
+func CutDelim(delim string) CutOpt {
 	return func(opts *cutOpts) {
 		opts.delimiter = delim
 	}
@@ -110,7 +110,7 @@ func defaultCutCollector(entry LogEntry, fields []string) (LogEntry, string) {
 func Cut(entry LogEntry, opt ...CutOpt) (LogEntry, error) {
 	opts := &cutOpts{
 		field:        StandardMessageField,
-		delimiter:    ' ',
+		delimiter:    " ",
 		removeSource: false,
 	}
 	for _, o := range opt {
@@ -125,7 +125,7 @@ func Cut(entry LogEntry, opt ...CutOpt) (LogEntry, error) {
 		if !ok {
 			return entry, ErrNotACutString
 		}
-		fields := strings.Split(str, string([]rune{opts.delimiter}))
+		fields := strings.Split(str, opts.delimiter)
 		entry, remaining := opts.collector(entry, fields)
 		if opts.removeSource {
 			delete(entry, opts.field)
