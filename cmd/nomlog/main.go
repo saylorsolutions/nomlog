@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/saylorsolutions/nomlog/pkg/dsl"
+	"github.com/saylorsolutions/nomlog/plugin"
 	"github.com/saylorsolutions/nomlog/plugin/file"
 	"github.com/saylorsolutions/nomlog/plugin/store"
 	"github.com/saylorsolutions/nomlog/runtime"
@@ -21,7 +22,7 @@ func main() {
 		return
 	}
 	args := os.Args[1:]
-	if len(args) > 1 {
+	if len(args) >= 1 {
 		switch args[0] {
 		case "exec":
 			start := time.Now()
@@ -44,9 +45,15 @@ func main() {
 				exitError("Dry run failed: %v", err)
 			}
 			fmt.Println("Dry run ran successfully")
+		case "plugins":
+			doPrintPlugins()
+		case "help":
+			usage()
 		default:
 			exitError("Unrecognized command: '%s'", args[0])
 		}
+	} else {
+		exitError("No command specified")
 	}
 }
 
@@ -63,20 +70,39 @@ func usage() {
 	text := `
 nomlog is a log management tool that is able to execute scripts.
 
+  nomlog help
+  nomlog plugins
   nomlog exec FILE
   nomlog vet FILE
 
+The 'help' subcommand will print this usage information.
+The 'plugins' subcommand will print information about plugins, and the documentation for all plugins loaded into the runtime for this program.
 The 'exec' subcommand will execute FILE as a nomlog script. Any errors that occur during execution will be reported.
-The 'vet' subcommand will dry run FILE as a nomlog script. Errors will still be reported as if the script were really executed, but no action will be taken.`
-	fmt.Println(text)
+The 'vet' subcommand will dry run FILE as a nomlog script. Errors will still be reported as if the script were really executed, but no action will be taken.
+`
+	fmt.Print(text)
+}
+
+func plugins() []plugin.Plugin {
+	return []plugin.Plugin{
+		file.Plugin(),
+		store.Plugin(),
+	}
+}
+
+func doPrintPlugins() {
+	reg := plugin.NewRegistration()
+	for _, p := range plugins() {
+		p.Register(reg)
+	}
+	fmt.Println("Plugins are used to extend the functionality of a nomlog based applications with technology specific functionality")
+	fmt.Println()
+	fmt.Print(reg.AllDocs())
 }
 
 func doExec(log hclog.Logger, args ...string) (rerr error) {
 	if len(args) >= 1 {
-		r := runtime.NewRuntime(log,
-			file.Plugin(),
-			store.Plugin(),
-		)
+		r := runtime.NewRuntime(log, plugins()...)
 		if err := r.Start(context.Background()); err != nil {
 			return err
 		}
@@ -102,10 +128,7 @@ func doExec(log hclog.Logger, args ...string) (rerr error) {
 
 func doVet(log hclog.Logger, args ...string) (rerr error) {
 	if len(args) >= 1 {
-		r := runtime.NewRuntime(log,
-			file.Plugin(),
-			store.Plugin(),
-		)
+		r := runtime.NewRuntime(log, plugins()...)
 		if err := r.Start(context.Background()); err != nil {
 			return err
 		}

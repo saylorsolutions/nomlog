@@ -47,6 +47,7 @@ func NewRegistration() *Registration {
 	}
 }
 
+// RegisterSource is called by Plugin.Register to provide a source for use in DSL scripts.
 func (r *Registration) RegisterSource(qualifier, class string, src SourceFunc) {
 	if src == nil {
 		panic("source is nil")
@@ -59,6 +60,7 @@ func (r *Registration) RegisterSource(qualifier, class string, src SourceFunc) {
 	sourceMap[class] = src
 }
 
+// DocumentSource is used to document a provided plugin source. It's recommended to provide usage information in this documentation.
 func (r *Registration) DocumentSource(qualifier, class, doc string) {
 	sourceMap, ok := r.sourcesDoc[qualifier]
 	if !ok {
@@ -68,6 +70,8 @@ func (r *Registration) DocumentSource(qualifier, class, doc string) {
 	sourceMap[class] = doc
 }
 
+// Source retrieves a source known to this Registration.
+// It returns the SourceFunc if it exists, documentation, and a bool indicating whether the qualifier and class pair matches a known source.
 func (r *Registration) Source(qualifier, class string) (SourceFunc, string, bool) {
 	sources, ok := r.sources[qualifier]
 	if !ok {
@@ -89,6 +93,7 @@ func (r *Registration) Source(qualifier, class string) (SourceFunc, string, bool
 	return source, doc, true
 }
 
+// RegisterSink is called by Plugin.Register to provide a sink for use in DSL scripts.
 func (r *Registration) RegisterSink(qualifier, class string, sink SinkFunc) {
 	if sink == nil {
 		panic("sink is nil")
@@ -101,6 +106,7 @@ func (r *Registration) RegisterSink(qualifier, class string, sink SinkFunc) {
 	sinkMap[class] = sink
 }
 
+// DocumentSink is used to document a provided plugin sink. It's recommended to provide usage information in this documentation.
 func (r *Registration) DocumentSink(qualifier, class, doc string) {
 	sinkMap, ok := r.sinksDoc[qualifier]
 	if !ok {
@@ -110,6 +116,8 @@ func (r *Registration) DocumentSink(qualifier, class, doc string) {
 	sinkMap[class] = doc
 }
 
+// Sink retrieves a sink known to this Registration.
+// It returns the SinkFunc if it exists, documentation, and a bool indicating whether the qualifier and class pair matches a known sink.
 func (r *Registration) Sink(qualifier, class string) (SinkFunc, string, bool) {
 	sinks, ok := r.sinks[qualifier]
 	if !ok {
@@ -131,6 +139,8 @@ func (r *Registration) Sink(qualifier, class string) (SinkFunc, string, bool) {
 	return sink, doc, true
 }
 
+// AllDocs will return a string containing all the documentation for all loaded plugins.
+// The listing will include sources, then sinks, in alphabetical order by qualifier and class.
 func (r *Registration) AllDocs() string {
 	var buf strings.Builder
 	buf.WriteString("Sources:\n")
