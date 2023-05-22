@@ -3,9 +3,9 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"github.com/saylorsolutions/nomlog/pkg/dsl"
 	"github.com/saylorsolutions/nomlog/pkg/entries"
 	"github.com/saylorsolutions/nomlog/pkg/iterator"
+	"github.com/saylorsolutions/nomlog/runtime/dsl"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

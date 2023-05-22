@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/saylorsolutions/nomlog/pkg/dsl"
 	"github.com/saylorsolutions/nomlog/pkg/iterator"
+	"github.com/saylorsolutions/nomlog/runtime/dsl"
 	"sort"
 	"strings"
 )

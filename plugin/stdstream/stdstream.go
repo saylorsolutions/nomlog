@@ -5,10 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/saylorsolutions/nomlog/pkg/dsl"
 	"github.com/saylorsolutions/nomlog/pkg/entries"
 	"github.com/saylorsolutions/nomlog/pkg/iterator"
 	"github.com/saylorsolutions/nomlog/plugin"
+	"github.com/saylorsolutions/nomlog/runtime/dsl"
 	"os"
 )
 
