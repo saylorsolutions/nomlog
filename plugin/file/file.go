@@ -77,24 +77,20 @@ func CtxSource(ctx context.Context, filename string) (iterator.Iterator, error) 
 		return nil, err
 	}
 
-	_ctx, cancel := context.WithCancel(ctx)
 	ch := make(chan entries.LogEntry)
-	iter := iterator.FromChannel(ch)
-
 	go func() {
-		scanner := bufio.NewScanner(f)
 		defer func() {
-			cancel()
 			close(ch)
 			_ = f.Close()
 		}()
+		scanner := bufio.NewScanner(f)
 
 		var (
 			hasClosed bool
 			num       int
 		)
 		go func() {
-			<-_ctx.Done()
+			<-ctx.Done()
 			hasClosed = true
 		}()
 
@@ -110,7 +106,7 @@ func CtxSource(ctx context.Context, filename string) (iterator.Iterator, error) 
 			ch <- entry
 		}
 	}()
-	return iter, nil
+	return iterator.FromChannel(ch), nil
 }
 
 // Sink will append each entry in the iterator.Iterator to the specified file, creating it if necessary.
