@@ -39,7 +39,7 @@ func Cancellable(ctx context.Context, iter Iterator) Iterator {
 			drain.Do(func() {
 				Drain(iter)
 			})
-			return nil, -1, ErrAtEnd
+			return Err(ErrAtEnd)
 		}
 		return iter.Next()
 	})

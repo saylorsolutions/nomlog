@@ -7,7 +7,7 @@ func Reassigner(iter Iterator, spec entries.ReassignSpec) Iterator {
 	return Func(func() (entries.LogEntry, int, error) {
 		entry, i, err := iter.Next()
 		if err != nil {
-			return nil, -1, err
+			return Err(err)
 		}
 		entry = entries.Reassign(entry, spec)
 		return entry, i, nil

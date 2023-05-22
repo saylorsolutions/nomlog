@@ -59,7 +59,7 @@ func FromSlice(slice []entries.LogEntry) Iterator {
 	cur := 0
 	return Func(func() (entries.LogEntry, int, error) {
 		if cur >= len(slice) {
-			return nil, -1, ErrAtEnd
+			return Err(ErrAtEnd)
 		}
 		e := slice[cur]
 		i := cur
