@@ -2,7 +2,6 @@ package iterator
 
 import (
 	"context"
-	"errors"
 	"github.com/saylorsolutions/nomlog/pkg/entries"
 	"sync"
 )
@@ -39,7 +38,7 @@ func Cancellable(ctx context.Context, iter Iterator) Iterator {
 			drain.Do(func() {
 				Drain(iter)
 			})
-			return Err(ErrAtEnd)
+			return End()
 		}
 		return iter.Next()
 	})
@@ -51,7 +50,7 @@ func Concat(base, next Iterator) Iterator {
 	return Func(func() (entries.LogEntry, int, error) {
 		e, i, err := base.Next()
 		if err != nil {
-			if errors.Is(err, ErrAtEnd) {
+			if IsEnd(err) {
 				e, i, err := next.Next()
 				if err != nil {
 					return e, i, err

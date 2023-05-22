@@ -13,10 +13,10 @@ var (
 
 type Iterator interface {
 	// Next returns the next LogEntry and its offset in the stream.
-	// May return ErrAtEnd if the end of the stream is reached.
+	// Should return ErrAtEnd if the end of the stream is reached.
 	Next() (entries.LogEntry, int, error)
 	// Iterate will progress through all LogEntry items in the stream, calling iter for each one along with the offset.
-	// If iter returns ErrAtEnd, then iteration will cease, returning nil.
+	// If iter returns ErrAtEnd, then iteration will cease, returning a nil error.
 	// If any other error is returned, then iteration will cease, and the error will be returned.
 	Iterate(iter func(entry entries.LogEntry, i int) error) error
 }
@@ -35,16 +35,16 @@ func (f Func) Iterate(iter func(entry entries.LogEntry, i int) error) error {
 	for {
 		entry, i, err := f.Next()
 		if err != nil {
-			if errors.Is(err, ErrAtEnd) {
+			if IsEnd(err) {
 				return nil
 			}
 			return err
 		}
 		if err := iter(entry, i); err != nil {
-			if errors.Is(err, ErrAtEnd) {
-				Drain(f)
+			if IsEnd(err) {
 				return nil
 			}
+			Drain(f)
 			return err
 		}
 	}
@@ -55,11 +55,21 @@ func Err(err error) (entries.LogEntry, int, error) {
 	return nil, -1, err
 }
 
+// End signifies that the end of the stream has been reached.
+func End() (entries.LogEntry, int, error) {
+	return Err(ErrAtEnd)
+}
+
+// IsEnd returns whether the error indicates the end of a stream.
+func IsEnd(err error) bool {
+	return errors.Is(err, ErrAtEnd)
+}
+
 func FromSlice(slice []entries.LogEntry) Iterator {
 	cur := 0
 	return Func(func() (entries.LogEntry, int, error) {
 		if cur >= len(slice) {
-			return Err(ErrAtEnd)
+			return End()
 		}
 		e := slice[cur]
 		i := cur
@@ -68,18 +78,29 @@ func FromSlice(slice []entries.LogEntry) Iterator {
 	})
 }
 
-func FromChannel(entries <-chan entries.LogEntry) Iterator {
-	if entries == nil {
-		return Empty()
-	}
-	return &entryChannel{ch: entries}
+// FromChannel will create a new Iterator from a channel of entries.LogEntry.
+func FromChannel(_entries <-chan entries.LogEntry) Iterator {
+	var next int
+	return Func(func() (entries.LogEntry, int, error) {
+		entry, ok := <-_entries
+		if !ok {
+			return End()
+		}
+		cur := next
+		next++
+		return entry, cur, nil
+	})
 }
 
-func AsChannel(iter Iterator) <-chan entries.LogEntry {
-	if chi, ok := iter.(*entryChannel); ok {
-		return chi.ch
+// AsChannel will create a channel that is populated from the Iterator by a new goroutine.
+// If bufferSize is populated, then the returned channel will be a buffered channel.
+func AsChannel(iter Iterator, bufferSize ...int) <-chan entries.LogEntry {
+	var ch chan entries.LogEntry
+	if len(bufferSize) == 0 {
+		ch = make(chan entries.LogEntry)
+	} else {
+		ch = make(chan entries.LogEntry, bufferSize[0])
 	}
-	ch := make(chan entries.LogEntry)
 	go func() {
 		defer close(ch)
 		_ = iter.Iterate(func(entry entries.LogEntry, i int) error {
