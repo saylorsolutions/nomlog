@@ -12,6 +12,10 @@ import (
 	"os"
 )
 
+func Plugin() plugin.Plugin {
+	return new(stdplugin)
+}
+
 var _ plugin.Plugin = (*stdplugin)(nil)
 
 type stdplugin struct {

@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/saylorsolutions/nomlog/plugin"
 	"github.com/saylorsolutions/nomlog/plugin/file"
+	"github.com/saylorsolutions/nomlog/plugin/stdstream"
 	"github.com/saylorsolutions/nomlog/plugin/store"
 	"github.com/saylorsolutions/nomlog/runtime"
 	"github.com/saylorsolutions/nomlog/runtime/dsl"
@@ -87,6 +88,7 @@ func plugins() []plugin.Plugin {
 	return []plugin.Plugin{
 		file.Plugin(),
 		store.Plugin(),
+		stdstream.Plugin(),
 	}
 }
 
