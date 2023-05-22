@@ -54,3 +54,16 @@ func TestAst_MarshalJSON(t *testing.T) {
 	assert.NoError(t, err)
 	t.Log(string(data))
 }
+
+func TestParseString_Multiline(t *testing.T) {
+	script := `source as src file.File "a really long string
+that is even multi-line"`
+	nodes, err := ParseString(script)
+	assert.NoError(t, err)
+	assert.Len(t, nodes, 1)
+	assert.Equal(t, SOURCE, nodes[0].Type())
+	src, ok := nodes[0].(*Source)
+	assert.True(t, ok, "SOURCE node should be *Source")
+	assert.Len(t, src.Args, 1)
+	assert.Equal(t, "\"a really long string\nthat is even multi-line\"", src.Args[0].Text())
+}
