@@ -7,7 +7,7 @@ import (
 
 func TestCut(t *testing.T) {
 	entry := LogEntry{
-		StandardMessageField: "a b c",
+		StandardMessageField: "a  b       c",
 	}
 	entry, err := Cut(entry,
 		CutDelim(" "),
@@ -20,6 +20,37 @@ func TestCut(t *testing.T) {
 				Collector(),
 		),
 		RemoveSource(),
+	)
+	assert.NoError(t, err)
+
+	a, ok := entry.AsString("a")
+	assert.True(t, ok, "Should have a new field 'a'")
+	assert.Equal(t, "a", a)
+	b, ok := entry.AsString("b")
+	assert.True(t, ok, "Should have a new field 'b'")
+	assert.Equal(t, "b", b)
+	c, ok := entry.AsString("c")
+	assert.True(t, ok, "Should have a new field 'c'")
+	assert.Equal(t, "c", c)
+	assert.False(t, entry.HasField(StandardMessageField), "Standard message field should be removed after cutting")
+}
+
+func TestCut_RetainBlankFields(t *testing.T) {
+	entry := LogEntry{
+		StandardMessageField: "a  b       c",
+	}
+	entry, err := Cut(entry,
+		CutDelim(" "),
+		CutField(StandardMessageField),
+		CutCollector(
+			NewCutCollectSpec().
+				Map("a", 0).
+				Map("b", 2).
+				Map("c", 9).
+				Collector(),
+		),
+		RemoveSource(),
+		RetainBlankFields(),
 	)
 	assert.NoError(t, err)
 

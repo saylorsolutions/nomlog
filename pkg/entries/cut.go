@@ -11,10 +11,11 @@ var (
 )
 
 type cutOpts struct {
-	field        string
-	delimiter    string
-	collector    func(entry LogEntry, fields []string) (collected LogEntry, remaining string)
-	removeSource bool
+	field           string
+	delimiter       string
+	collector       func(entry LogEntry, fields []string) (collected LogEntry, remaining string)
+	removeSource    bool
+	skipBlankFields bool
 }
 
 // CutOpt represents a functional option for Cut.
@@ -45,6 +46,12 @@ func CutCollector(fn func(entry LogEntry, fields []string) (LogEntry, string)) C
 func RemoveSource() CutOpt {
 	return func(opts *cutOpts) {
 		opts.removeSource = true
+	}
+}
+
+func RetainBlankFields() CutOpt {
+	return func(opts *cutOpts) {
+		opts.skipBlankFields = false
 	}
 }
 
@@ -109,9 +116,10 @@ func defaultCutCollector(entry LogEntry, fields []string) (LogEntry, string) {
 // The source field must be a string for Cut to operate as intended.
 func Cut(entry LogEntry, opt ...CutOpt) (LogEntry, error) {
 	opts := &cutOpts{
-		field:        StandardMessageField,
-		delimiter:    " ",
-		removeSource: false,
+		field:           StandardMessageField,
+		delimiter:       " ",
+		skipBlankFields: true,
+		removeSource:    false,
 	}
 	for _, o := range opt {
 		o(opts)
@@ -126,6 +134,16 @@ func Cut(entry LogEntry, opt ...CutOpt) (LogEntry, error) {
 			return entry, ErrNotACutString
 		}
 		fields := strings.Split(str, opts.delimiter)
+		if opts.skipBlankFields {
+			var nonBlank []string
+			for _, f := range fields {
+				if len(f) == 0 {
+					continue
+				}
+				nonBlank = append(nonBlank, f)
+			}
+			fields = nonBlank
+		}
 		entry, remaining := opts.collector(entry, fields)
 		if opts.removeSource {
 			delete(entry, opts.field)
