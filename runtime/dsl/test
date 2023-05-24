@@ -6,6 +6,7 @@ append e to f
 cut with " " f set(field1 = 0, field2 = -1)
 fanout f as g and h
 tag g with "important"
+
 join g with "^leading text", "^other pattern"
 sink g to file.File "file3.log"
 sink h async as i to    file.File "file4.log"

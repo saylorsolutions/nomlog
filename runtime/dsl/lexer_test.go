@@ -2,6 +2,7 @@ package dsl
 
 import (
 	_ "embed"
+	"github.com/saylorsolutions/nomlog/pkg/entries"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -47,6 +48,19 @@ func TestLexer_Lex(t *testing.T) {
 	}
 }
 
+func TestLexIdentifierWithLeadingAt(t *testing.T) {
+	l := lexString(entries.StandardMessageField)
+	go l.lex()
+	tokens := consume(l.tokens)
+	assert.NoError(t, l.err)
+
+	expected := []lexType{tIdentifier, tEof}
+	assert.Len(t, tokens, len(expected))
+	for i, tok := range tokens {
+		assert.Equalf(t, expected[i], tok.Type, "token %d mismatch: %s", i, tok.Text)
+	}
+}
+
 //go:embed test
 var script []byte
 
@@ -76,6 +90,7 @@ func TestLexFile(t *testing.T) {
 		tCut, tWith, tString, tIdentifier, tSet, tLpar, tIdentifier, tEq, tInt, tComma, tIdentifier, tEq, tInt, tRpar, tEol,
 		tFanout, tIdentifier, tAs, tIdentifier, tAnd, tIdentifier, tEol,
 		tTag, tIdentifier, tWith, tString, tEol,
+		tEol,
 		tJoin, tIdentifier, tWith, tString, tComma, tString, tEol,
 		tSink, tIdentifier, tTo, tIdentifier, tDot, tIdentifier, tString, tEol,
 		tSink, tIdentifier, tAsync, tAs, tIdentifier, tTo, tIdentifier, tDot, tIdentifier, tString, tEol,

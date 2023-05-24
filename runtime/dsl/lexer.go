@@ -45,7 +45,7 @@ const (
 const (
 	alpha       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	number      = "0123456789"
-	idStart     = alpha
+	idStart     = alpha + "@"
 	idRemainder = alpha + number + "_"
 )
 
@@ -95,11 +95,11 @@ func (l *lexer) postToken(t lexType) {
 }
 
 func (l *lexer) handleLexErr(err error) {
-	l.err = err
 	if err == io.EOF {
 		l.tokens <- token{Pos: l.pos, Line: l.line, Text: "", Type: tEof}
 		return
 	}
+	l.err = err
 	text := l.consume()
 	text = ": '" + text + "'"
 	l.tokens <- token{Pos: l.pos, Line: l.line, Text: err.Error() + text, Type: tErr}

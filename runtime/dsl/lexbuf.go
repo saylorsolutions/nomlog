@@ -127,6 +127,9 @@ func (b *lexBuf) readUntilWhitespaceOrBreak() error {
 	for {
 		c, err := b.read()
 		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
 			return err
 		}
 		switch {
