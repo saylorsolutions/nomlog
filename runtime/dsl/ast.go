@@ -328,9 +328,6 @@ func (p *parser) parseArgs(str *tokenStream) ([]*Arg, error) {
 		a, err := p.parseArg(str)
 		if err != nil {
 			if notAMatch(err) {
-				if len(args) == 0 {
-					return nil, nil
-				}
 				return args, nil
 			}
 			return nil, err
