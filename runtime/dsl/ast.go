@@ -329,7 +329,7 @@ func (p *parser) parseArgs(str *tokenStream) ([]*Arg, error) {
 		if err != nil {
 			if notAMatch(err) {
 				if len(args) == 0 {
-					return nil, unexpected(str.peek(), "argument")
+					return nil, nil
 				}
 				return args, nil
 			}
