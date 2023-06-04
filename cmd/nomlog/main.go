@@ -50,6 +50,8 @@ func main() {
 			doPrintPlugins()
 		case "help":
 			usage()
+		case "dsl":
+			doPrintDslHelp()
 		default:
 			exitError("Unrecognized command: '%s'", args[0])
 		}
@@ -68,16 +70,17 @@ func exitError(format string, args ...any) {
 }
 
 func usage() {
-	text := `
-nomlog is a log management tool that is able to execute scripts.
+	text := `nomlog is a log management tool that is able to execute scripts.
 
   nomlog help
   nomlog plugins
+  nomlog dsl
   nomlog exec FILE
   nomlog vet FILE
 
 The 'help' subcommand will print this usage information.
 The 'plugins' subcommand will print information about plugins, and the documentation for all plugins loaded into the runtime for this program.
+The 'dsl' subcommand will print information about the scripting DSL.
 The 'exec' subcommand will execute FILE as a nomlog script. Any errors that occur during execution will be reported.
 The 'vet' subcommand will dry run FILE as a nomlog script. Errors will still be reported as if the script were really executed, but no action will be taken.
 `
@@ -90,6 +93,10 @@ func plugins() []plugin.Plugin {
 		store.Plugin(),
 		stdstream.Plugin(),
 	}
+}
+
+func doPrintDslHelp() {
+	fmt.Print(dsl.GrammarDescription)
 }
 
 func doPrintPlugins() {

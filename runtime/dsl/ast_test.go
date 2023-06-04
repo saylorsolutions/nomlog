@@ -67,3 +67,25 @@ that is even multi-line"`
 	assert.Len(t, src.Args, 1)
 	assert.Equal(t, "\"a really long string\nthat is even multi-line\"", src.Args[0].Text())
 }
+
+func TestParse_ClassNoArgs(t *testing.T) {
+	script := `source as a std.In
+sink a to std.Out`
+	nodes, err := ParseString(script)
+	assert.NoError(t, err)
+
+	expected := []AstType{SOURCE, SINK}
+	assert.Len(t, nodes, 2)
+	for i, n := range nodes {
+		assert.NotNil(t, n)
+		assert.Equal(t, expected[i], n.Type())
+		switch n := n.(type) {
+		case *Source:
+			assert.Len(t, n.Args, 0)
+		case *Sink:
+			assert.Len(t, n.Args, 0)
+		default:
+			t.Errorf("Unexpected AstNode type '%T'", n)
+		}
+	}
+}

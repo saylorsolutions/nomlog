@@ -41,7 +41,7 @@ There are some dynamically defined literals used in these productions.
 ```
 eol           := (EOL|EOF)
 arg           := (STRING|NUMBER|INT|IDENTIFIER)
-args          := arg (COMMA arg)*
+args          := (arg (COMMA arg)*)?
 source_class  := IDENTIFIER DOT IDENTIFIER
 source        := SOURCE AS IDENTIFIER source_class args eol
 sink_class    := IDENTIFIER DOT IDENTIFIER
